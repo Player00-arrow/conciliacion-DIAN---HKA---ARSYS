@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conciliación Contabilidad — TDH SA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Lienzo claro con atmósfera */
+  --bg:       #eef0f8;
+  --bg2:      rgba(255,255,255,0.72);
+  --bg2-solid:#ffffff;
+  --bg3:      #f3f4fb;
+  --border:   rgba(255,255,255,0.7);
+  --border2:  rgba(140,145,180,0.18);
+  --text:     #2a2d45;
+  --text2:    #6b7090;
+  --text3:    #a4a8c4;
+  /* Paleta del mockup */
+  --violet:   #8b7ff0;
+  --violet-d: #6c5ce7;
+  --green:    #4ec99a;
+  --green-d:  #2bb583;
+  --orange:   #f5a868;
+  --orange-d: #ef8e4a;
+  --pink:     #f08fb0;
+  --cyan:     #5fd4d0;
+  --blue:     #6c8ff0;
+  --red:      #f0708a;
+  --red-d:    #e0556f;
+  --amber:    #f0b86c;
+  /* Semánticos */
+  --accent:   #8b7ff0;
+  --tdh-green:#2bb583;
+  --tdh-gold: #f5a868;
+  --radius:   18px;
+  --radius-sm:12px;
+  --sidebar-w:248px;
+  --sans: 'Plus Jakarta Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --glass-shadow: 0 8px 32px rgba(108,92,231,0.08), 0 2px 8px rgba(42,45,69,0.04);
+  --glass-border: 1px solid rgba(255,255,255,0.8);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Blobs de color difuminados de fondo */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  z-index: 0;
+  pointer-events: none;
+}
+body::before {
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(139,127,240,0.5), transparent 70%);
+  top: -120px; right: 8%;
+}
+body::after {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(78,201,154,0.38), transparent 70%);
+  bottom: -160px; left: 18%;
+}
+/* Tercer blob naranja */
+.bg-blob3 {
+  position: fixed;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.32;
+  background: radial-gradient(circle, rgba(245,168,104,0.5), transparent 70%);
+  top: 40%; left: 45%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(255,255,255,0.6);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 26px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sidebar-logo img { height: 40px; width: auto; }
+.sidebar-logo .app-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--violet-d);
+  background: rgba(139,127,240,0.12);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.sidebar-section {
+  padding: 18px 22px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  margin: 3px 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.nav-item:hover { background: rgba(139,127,240,0.08); color: var(--text); }
+.nav-item.active {
+  background: linear-gradient(135deg, var(--violet), var(--violet-d));
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(108,92,231,0.35);
+}
+.nav-item .nav-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.nav-item.active .nav-dot { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8); }
+.nav-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(140,145,180,0.12);
+  color: var(--text2);
+}
+.nav-item.active .nav-count { background: rgba(255,255,255,0.25); color: #fff; }
+
+.sidebar-divider { height: 1px; background: rgba(140,145,180,0.12); margin: 12px 18px; }
+
+/* Upload zones */
+.side-upload-block { padding: 0 12px; margin-bottom: 5px; }
+.side-uz {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(140,145,180,0.16);
+  background: rgba(255,255,255,0.4);
+  transition: all 0.2s;
+  width: 100%;
+}
+.side-uz:hover { border-color: var(--violet); background: rgba(139,127,240,0.06); }
+.side-uz.loaded { border-color: var(--green); background: rgba(78,201,154,0.1); }
+.side-uz input { display: none; }
+.side-uz .uz-num {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  padding: 2px 6px; border-radius: 6px;
+  background: rgba(139,127,240,0.12); color: var(--violet-d);
+  flex-shrink: 0;
+}
+.side-uz.loaded .uz-num { background: rgba(78,201,154,0.18); color: var(--green-d); }
+.side-uz .uz-lbl { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-uz.loaded .uz-lbl { color: var(--green-d); font-weight: 600; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+
+/* ── BOTONES ── */
+.btn {
+  padding: 9px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,0.6);
+  color: var(--text2);
+  font-family: var(--sans);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { background: #fff; color: var(--text); transform: translateY(-1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-run {
+  width: 100%; justify-content: center;
+  background: linear-gradient(135deg, var(--violet), var(--violet-d));
+  border: none; color: #fff; padding: 12px;
+  box-shadow: 0 6px 18px rgba(108,92,231,0.35);
+}
+.btn-run:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(108,92,231,0.5); color: #fff; }
+.btn-export {
+  width: 100%; justify-content: center;
+  background: rgba(255,255,255,0.5); color: var(--text2); font-size: 12px;
+}
+.btn-export:hover:not(:disabled) { background: #fff; color: var(--violet-d); }
+
+/* ── MAIN ── */
+#main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  padding: 0 32px;
+  height: 72px;
+  display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(238,240,248,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-title { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+.topbar-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.topbar-badge {
+  padding: 5px 12px; border-radius: 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+}
+.tb-green { background: rgba(78,201,154,0.15); color: var(--green-d); }
+.tb-amber { background: rgba(245,168,104,0.18); color: var(--orange-d); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ── CONTENT ── */
+.content { padding: 8px 32px 32px; flex: 1; }
+
+/* ── UPLOAD ── */
+#panel-upload { max-width: 860px; }
+.panel-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; color: var(--text); }
+.panel-sub { color: var(--text2); font-size: 13px; margin-bottom: 28px; line-height: 1.7; }
+
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.upload-card {
+  background: var(--bg2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: var(--glass-border);
+  border-radius: var(--radius);
+  padding: 22px;
+  transition: all 0.25s;
+  box-shadow: var(--glass-shadow);
+}
+.upload-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,92,231,0.12); }
+.upload-card.loaded { border-color: rgba(78,201,154,0.5); }
+.upload-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.file-num {
+  width: 30px; height: 30px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 12px; font-weight: 600; color: #fff;
+}
+.fn1 { background: linear-gradient(135deg, var(--violet), var(--violet-d)); }
+.fn2 { background: linear-gradient(135deg, var(--pink), #d96f95); }
+.fn3 { background: linear-gradient(135deg, var(--green), var(--green-d)); }
+.fn4 { background: linear-gradient(135deg, var(--orange), var(--orange-d)); }
+.upload-card-title { font-size: 15px; font-weight: 700; }
+.upload-card-desc { font-size: 11px; color: var(--text3); margin-bottom: 14px; line-height: 1.6; }
+
+.drop-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 16px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: rgba(243,244,251,0.5);
+}
+.drop-zone:hover { border-color: var(--violet); background: rgba(139,127,240,0.06); }
+.drop-zone.loaded { border-color: var(--green); border-style: solid; background: rgba(78,201,154,0.08); }
+.drop-zone input { display: none; }
+.drop-zone .dz-icon { font-size: 20px; margin-bottom: 4px; }
+.drop-zone .dz-label { font-size: 11px; color: var(--text3); }
+.drop-zone .dz-label.ok { color: var(--green-d); font-weight: 700; }
+
+.run-wrap { display: flex; justify-content: center; margin-top: 8px; }
+.btn-run-main {
+  padding: 14px 44px; font-size: 14px; font-weight: 700;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--violet), var(--violet-d));
+  border: none; color: #fff; cursor: pointer; font-family: var(--sans);
+  transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 8px 24px rgba(108,92,231,0.4);
+}
+.btn-run-main:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(108,92,231,0.55); }
+.btn-run-main:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#progress-section { margin-top: 20px; display: none; }
+.progress-wrap {
+  background: var(--bg2); backdrop-filter: blur(20px);
+  border: var(--glass-border); border-radius: var(--radius);
+  padding: 26px 30px; box-shadow: var(--glass-shadow); margin-top: 20px;
+}
+.progress-label { font-size: 13px; color: var(--text2); margin-bottom: 12px; font-family: var(--mono); }
+.progress-bar-outer { height: 6px; background: rgba(140,145,180,0.15); border-radius: 6px; overflow: hidden; }
+.progress-bar-inner { height: 100%; background: linear-gradient(90deg, var(--violet), var(--green)); border-radius: 6px; width: 0; transition: width 0.4s ease; }
+
+/* ── STATS / KPI ── */
+.stats-bar { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card {
+  background: var(--bg2);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: var(--glass-border);
+  border-radius: var(--radius);
+  padding: 18px 22px; min-width: 158px; flex: 1;
+  box-shadow: var(--glass-shadow);
+  position: relative; overflow: hidden;
+  transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); }
+.stat-label { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 800; font-family: var(--sans); line-height: 1; letter-spacing: -1px; }
+.sv-red { color: var(--red-d); }
+.sv-amber { color: var(--orange-d); }
+.sv-blue { color: var(--violet-d); }
+.sv-green { color: var(--green-d); }
+
+/* ── LEGEND ── */
+.legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 12px 18px;
+  background: var(--bg2); backdrop-filter: blur(20px);
+  border: var(--glass-border); border-radius: var(--radius-sm);
+  box-shadow: var(--glass-shadow);
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+
+/* ── DASHBOARD ── */
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.bar-label { font-size: 12px; color: var(--text2); width: 130px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 26px; background: rgba(140,145,180,0.12); border-radius: 8px; overflow: hidden; display: flex; }
+.bar-fill { height: 100%; display: flex; align-items: center; padding: 0 9px; font-size: 10px; font-family: var(--mono); color: #fff; font-weight: 600; white-space: nowrap; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.bar-fill.bf-green { background: linear-gradient(90deg, var(--green), var(--green-d)); }
+.bar-fill.bf-red { background: linear-gradient(90deg, var(--red), var(--red-d)); }
+.bar-fill.bf-amber { background: linear-gradient(90deg, var(--orange), var(--orange-d)); }
+.bar-fill.bf-gray { background: var(--text3); }
+.aging-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.aging-label { font-size: 12px; color: var(--text2); width: 92px; flex-shrink: 0; font-family: var(--mono); }
+.aging-track { flex: 1; height: 22px; background: rgba(140,145,180,0.12); border-radius: 8px; overflow: hidden; }
+.aging-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; }
+.aging-count { font-size: 13px; font-family: var(--mono); font-weight: 600; color: var(--text); width: 38px; text-align: right; flex-shrink: 0; }
+.dash-top-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 22px; border-bottom: 1px solid rgba(140,145,180,0.1); }
+.dash-top-row:last-child { border-bottom: none; }
+.dash-top-name { font-size: 13px; color: var(--text); font-weight: 600; }
+.dash-top-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+.dash-top-val { font-family: var(--mono); font-size: 14px; color: var(--red-d); font-weight: 600; }
+
+/* ── FILTROS ── */
+.filters-bar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.search-box {
+  padding: 10px 16px;
+  background: var(--bg2); backdrop-filter: blur(20px);
+  border: var(--glass-border); border-radius: 12px;
+  color: var(--text); font-family: var(--sans); font-size: 13px;
+  width: 300px; outline: none; transition: all 0.2s;
+  box-shadow: var(--glass-shadow);
+}
+.search-box:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,127,240,0.12); }
+.search-box::placeholder { color: var(--text3); }
+.filter-select {
+  padding: 10px 14px;
+  background: var(--bg2); backdrop-filter: blur(20px);
+  border: var(--glass-border); border-radius: 12px;
+  color: var(--text); font-family: var(--sans); font-size: 13px;
+  outline: none; cursor: pointer; box-shadow: var(--glass-shadow);
+}
+.filter-select:focus { border-color: var(--violet); }
+
+/* ── TABLA ── */
+.table-wrap {
+  background: var(--bg2);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: var(--glass-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--glass-shadow);
+}
+.table-header-bar {
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(140,145,180,0.1);
+  display: flex; align-items: center; gap: 12px;
+}
+.table-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.table-count { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  padding: 12px 18px; text-align: left;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.6px;
+  text-transform: uppercase; color: var(--text3);
+  border-bottom: 1px solid rgba(140,145,180,0.12);
+  white-space: nowrap; cursor: pointer; user-select: none;
+  background: rgba(243,244,251,0.5); transition: color 0.15s;
+}
+thead th:hover { color: var(--violet-d); }
+tbody tr { border-bottom: 1px solid rgba(140,145,180,0.08); transition: background 0.12s; }
+tbody tr:hover { background: rgba(139,127,240,0.05); }
+tbody tr:last-child { border-bottom: none; }
+tbody td {
+  padding: 13px 18px; color: var(--text2);
+  white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+tbody td.mono { font-family: var(--mono); font-size: 12px; color: var(--text); }
+tbody td.bold { color: var(--text); font-weight: 600; }
+tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--text); }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; font-family: var(--mono);
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.badge-pendiente { background: rgba(240,112,138,0.15); color: var(--red-d); }
+.badge-solo-dian { background: rgba(140,145,180,0.14); color: var(--text2); }
+.badge-mant { background: rgba(78,201,154,0.15); color: var(--green-d); }
+.badge-otro { background: rgba(140,145,180,0.14); color: var(--text3); }
+.badge-typo { background: rgba(245,168,104,0.18); color: var(--orange-d); }
+.badge-nota { background: rgba(108,143,240,0.16); color: var(--blue); }
+.typo-ref:hover { text-decoration: underline; }
+.terc-drop { display:none; position:absolute; top:110%; left:0; z-index:50; width:340px; background:#fff; border:1px solid rgba(140,145,180,0.35); border-radius:12px; box-shadow:0 12px 32px rgba(30,30,60,0.18); padding:12px; }
+.terc-drop.open { display:block; }
+.terc-list { max-height:260px; overflow-y:auto; }
+.terc-item { display:flex; align-items:center; gap:8px; padding:5px 4px; font-size:12px; cursor:pointer; border-radius:6px; }
+.terc-item:hover { background:rgba(108,143,240,0.08); }
+.verif-btn { border:none; background:transparent; font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; }
+.verif-btn:hover { background:rgba(108,143,240,0.12); }
+.badge-fact { background: rgba(78,201,154,0.14); color: var(--green-d); }
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.dot-red { background: var(--red-d); }
+.dot-gray { background: var(--text3); }
+
+/* ── EMPTY ── */
+.empty-state { text-align: center; padding: 56px 20px; color: var(--text3); }
+.empty-icon { font-size: 34px; margin-bottom: 12px; }
+.empty-title { font-size: 15px; color: var(--text2); font-weight: 600; margin-bottom: 4px; }
+.empty-sub { font-size: 12px; }
+
+/* ── PANELS ── */
+.panel-tabs { display: none; }
+.panel-tabs.active { display: block; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(140,145,180,0.3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(140,145,180,0.5); }
+
+/* Donut central */
+.donut-wrap { display: flex; align-items: center; gap: 24px; padding: 20px; }
+.donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+.donut-legend-item .dl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.donut-legend-item .dl-val { margin-left: auto; font-family: var(--mono); font-weight: 600; color: var(--text); }
+
+/* Card section title */
+.section-grid { display: grid; gap: 16px; margin-bottom: 16px; }
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.stat-card, .table-wrap, .upload-card { animation: fadeInUp 0.4s ease backwards; }
+.stat-card:nth-child(1) { animation-delay: 0.02s; }
+.stat-card:nth-child(2) { animation-delay: 0.06s; }
+.stat-card:nth-child(3) { animation-delay: 0.10s; }
+.stat-card:nth-child(4) { animation-delay: 0.14s; }
+.stat-card:nth-child(5) { animation-delay: 0.18s; }
+
+</style>
+</head>
+<body>
+
+<div class="bg-blob3"></div>
+
+<!-- ── SIDEBAR ── -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <img id="logo-img" src="" alt="TDH Soluciones en Logística">
+    <span class="app-tag">Conciliación · Contabilidad</span>
+  </div>
+
+  <div class="sidebar-section">Archivos fuente</div>
+
+  <div class="side-upload-block">
+    <label class="side-uz" id="uz-dian">
+      <input type="file" accept=".xlsx,.xls" onchange="handleSideFile(event,'dian')">
+      <span class="uz-num">01</span>
+      <span class="uz-lbl" id="uz-dian-lbl">DIAN — Primario</span>
+    </label>
+  </div>
+  <div class="side-upload-block">
+    <label class="side-uz" id="uz-hka">
+      <input type="file" accept=".xlsx,.xls" onchange="handleSideFile(event,'hka')">
+      <span class="uz-num">02</span>
+      <span class="uz-lbl" id="uz-hka-lbl">HKA — Segundo</span>
+    </label>
+  </div>
+  <div class="side-upload-block">
+    <label class="side-uz" id="uz-arsys">
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="handleSideFile(event,'arsys')">
+      <span class="uz-num">03</span>
+      <span class="uz-lbl" id="uz-arsys-lbl">Arsys — Contable</span>
+    </label>
+  </div>
+
+  <div class="nav-item" id="nav-cruce" onclick="switchPanel('cruce')">
+    <span class="nav-dot"></span>
+    <span>Cruce completo</span>
+    <span class="nav-count" id="cnt-cruce">—</span>
+  </div>
+  <div class="nav-item" id="nav-orf" onclick="switchPanel('orf')">
+    <span class="nav-dot"></span>
+    <span>Detalle ORF S.A.</span>
+    <span class="nav-count" id="cnt-orf">—</span>
+  </div>
+
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section">General</div>
+
+  <div class="nav-item" id="nav-totalhka" onclick="switchPanel('totalhka')">
+    <span class="nav-dot"></span>
+    <span>Total Documentos HKA</span>
+    <span class="nav-count" id="cnt-totalhka">—</span>
+  </div>
+  <div class="nav-item" id="nav-totaldian" onclick="switchPanel('totaldian')">
+    <span class="nav-dot"></span>
+    <span>Total Documentos DIAN</span>
+    <span class="nav-count" id="cnt-totaldian">—</span>
+  </div>
+
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section">Análisis</div>
+
+  <div class="nav-item active" id="nav-cristian" onclick="switchPanel('cristian')">
+    <span class="nav-dot"></span>
+    <span>DIAN vs HKA</span>
+    <span class="nav-count" id="cnt-cristian">—</span>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="btn btn-run" onclick="runAll()" id="btn-run" disabled>
+      ▶ &nbsp;Ejecutar análisis
+    </button>
+    <button class="btn btn-export" onclick="exportCurrent()" id="btn-export" disabled>
+      ⬇ &nbsp;Exportar Excel
+    </button>
+    <button class="btn btn-export" onclick="exportPDF()" id="btn-pdf" disabled style="border-color:rgba(78,201,154,0.5);color:#7de3b8;">
+      📄 &nbsp;Certificado PDF
+    </button>
+    <button class="btn btn-export" onclick="runDiagnostic()" id="btn-diag" disabled style="border-color:rgba(245,158,11,0.4);color:#f0c84a;">
+      🔍 &nbsp;Diagnóstico
+    </button>
+  </div>
+  <div class="sidebar-watermark">TDH SA · Contabilidad · 2026</div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="topbar-title">Conciliación de Compras</div>
+      <div class="topbar-sub" id="topbar-sub">Cargue los archivos y ejecute el análisis</div>
+    </div>
+    <div class="topbar-right" id="topbar-badges"></div>
+    <span style="font-family:var(--mono);font-size:10px;color:#fff;background:var(--tdh-green);padding:4px 10px;border-radius:4px;margin-left:8px;">CONTA v9.2</span>
+  </div>
+
+  <div class="content">
+
+    <div id="aviso-nomapeados" style="display:none;background:rgba(245,168,104,0.14);border:1px solid rgba(245,168,104,0.4);border-radius:12px;padding:12px 18px;margin-bottom:16px;font-size:12.5px;color:var(--orange-d);"></div>
+
+    <!-- ═══ UPLOAD ═══ -->
+    <div id="panel-upload">
+      <div class="panel-title">Cargue los archivos fuente</div>
+      <div class="panel-sub">
+        La app transforma automáticamente cada archivo (filtros, llaves, separación de campos).<br>
+        Suba los archivos brutos tal como los exporta cada sistema. Son tres: DIAN, HKA y el movimiento contable de Arsys.
+      </div>
+
+      <div class="upload-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="upload-card" id="card-dian">
+          <div class="upload-card-header">
+            <div class="file-num fn1">01</div>
+            <div class="upload-card-title">DIAN</div>
+          </div>
+          <div class="upload-card-desc">Reporte del portal DIAN. Se toman los documentos Recibidos (facturas electrónicas y notas), sin importar la forma de pago.</div>
+          <label class="drop-zone" id="dz-dian">
+            <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'dian')">
+            <div class="dz-icon">📄</div>
+            <div class="dz-label" id="dz-dian-lbl">Clic o arrastre el archivo</div>
+          </label>
+        </div>
+
+        <div class="upload-card" id="card-hka">
+          <div class="upload-card-header">
+            <div class="file-num" style="background:#f0edfb;color:#5b3ea6;">02</div>
+            <div class="upload-card-title">HKA</div>
+          </div>
+          <div class="upload-card-desc">Reporte HKA con estados de documentos. Detecta el encabezado automáticamente y separa facturas de notas (con su factura referenciada).</div>
+          <label class="drop-zone" id="dz-hka">
+            <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'hka')">
+            <div class="dz-icon">📄</div>
+            <div class="dz-label" id="dz-hka-lbl">Clic o arrastre el archivo</div>
+          </label>
+        </div>
+
+        <div class="upload-card" id="card-arsys">
+          <div class="upload-card-header">
+            <div class="file-num fn3">03</div>
+            <div class="upload-card-title">Arsys — Contable</div>
+          </div>
+          <div class="upload-card-desc">Movimiento contable (Excel o CSV). Se filtran solo los tipos de documento de causación de compra configurados y se avisa si aparece un tipo similar no mapeado.</div>
+          <label class="drop-zone" id="dz-arsys">
+            <input type="file" accept=".xlsx,.xls,.csv" onchange="handleFile(event,'arsys')">
+            <div class="dz-icon">📄</div>
+            <div class="dz-label" id="dz-arsys-lbl">Clic o arrastre el archivo</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="run-wrap">
+        <button class="btn-run-main" onclick="runAll()" id="btn-run2" disabled>
+          ▶ &nbsp;Ejecutar análisis completo
+        </button>
+      </div>
+
+      <div id="progress-section">
+        <div class="progress-wrap" style="margin-top:20px;">
+          <div class="progress-label" id="progress-label">Procesando...</div>
+          <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANÁLISIS LISTO (pantalla neutra) ═══ -->
+    <div id="panel-ready" style="display:none;">
+      <div style="max-width:560px;margin:60px auto;text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">🔐</div>
+        <div class="panel-title" style="margin-bottom:10px;">Análisis completado</div>
+        <div class="panel-sub" style="margin-bottom:28px;">
+          Los datos ya están procesados. Cada analista debe ingresar a su propia sección
+          desde el menú lateral usando su clave de acceso.
+        </div>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+          <div class="upload-card" style="width:220px;cursor:pointer;" onclick="switchPanel('cristian')">
+            <div style="font-size:28px;margin-bottom:8px;">🔵</div>
+            <div class="upload-card-title">DIAN vs HKA</div>
+            <div class="upload-card-desc" style="margin-bottom:0;">Documentos que faltan en HKA</div>
+          </div>
+          <div class="upload-card" style="width:220px;cursor:pointer;" onclick="switchPanel('luna')">
+            <div style="font-size:28px;margin-bottom:8px;">🟣</div>
+            <div class="upload-card-title">DIAN vs Arsys</div>
+            <div class="upload-card-desc" style="margin-bottom:0;">Documentos sin contabilizar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══ TOTAL FACTURAS MANT. HKA ═══ -->
+    <div id="panel-totalhka" class="panel-tabs">
+      <div class="stats-bar" id="stats-totalhka"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-fact">Factura</span> Factura electrónica recibida en HKA.</div>
+        <div class="legend-item"><span class="badge badge-nota">Nota</span> Nota crédito/débito. La columna "Factura referenciada" indica qué factura afecta.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, proveedor, factura..." oninput="filterMantHKA(this.value)" id="search-totalhka">
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">Todos los documentos recibidos — HKA</span>
+          <span class="table-count" id="tbl-count-totalhka"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>NIT emisor</th>
+              <th>Proveedor</th>
+              <th>Documento</th>
+              <th>Tipo</th>
+              <th>Factura referenciada</th>
+              <th>Estatus HKA</th>
+              <th>Total</th>
+            </tr></thead>
+            <tbody id="tbody-totalhka">
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TOTAL FACTURAS MANT. DIAN ═══ -->
+    <div id="panel-totaldian" class="panel-tabs">
+      <div class="stats-bar" id="stats-totaldian"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-fact">Factura</span> Factura electrónica recibida (forma de pago 2 · crédito).</div>
+        <div class="legend-item"><span class="badge badge-nota">Nota</span> Nota crédito/débito recibida.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, nombre, factura..." oninput="filterMantDIAN(this.value)" id="search-totaldian">
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">Todos los documentos recibidos — DIAN</span>
+          <span class="table-count" id="tbl-count-totaldian"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>NIT emisor</th>
+              <th>Nombre emisor</th>
+              <th>Factura</th>
+              <th>Tipo</th>
+              <th>Forma pago</th>
+              <th>Fecha emisión</th>
+              <th>Total</th>
+            </tr></thead>
+            <tbody id="tbody-totaldian">
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CRISTIAN ═══ -->
+    <div id="panel-cristian" class="panel-tabs">
+      <div class="stats-bar" id="stats-cristian"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-pendiente"><span class="dot dot-red"></span> PENDIENTE EN HKA</span> Está en la DIAN pero no se encontró en HKA.</div>
+        <div class="legend-item"><span class="badge badge-typo">⚠ POSIBLE ERROR DIGITACIÓN</span> La factura existe en HKA pero con un carácter distinto (prefijo o consecutivo). La flecha → muestra cómo quedó registrada.</div>
+        </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, nombre, factura..." oninput="filterTable('cristian',this.value)" id="search-cristian">
+        <select class="filter-select" onchange="filterByStatus('cristian')" id="status-cristian">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE EN HKA">PENDIENTE EN HKA</option>
+          <option value="OK HKA">OK HKA</option>
+          <option value="POSIBLE ERROR DIGITACIÓN">POSIBLE ERROR DIGITACIÓN</option>
+        </select>
+        <div style="position:relative;display:inline-block;">
+          <button class="btn" style="font-size:12px;" onclick="toggleTercDrop('cristian')">👥 Terceros ▾</button>
+          <div id="terc-drop-cristian" class="terc-drop">
+            <input class="search-box" style="width:100%;margin-bottom:8px;" placeholder="Buscar tercero..." oninput="renderTercList('cristian',this.value)">
+            <label class="terc-item" style="font-weight:700;"><input type="checkbox" onchange="tercAll('cristian',this.checked)" id="terc-all-cristian"> (Seleccionar todo)</label>
+            <div id="terc-list-cristian" class="terc-list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn" style="flex:1;font-size:12px;" onclick="aplicarTerc('cristian')">✓ Aplicar</button>
+              <button class="btn" style="flex:1;font-size:12px;" onclick="limpiarTerc('cristian')">✕ Limpiar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">DIAN vs HKA — documentos pendientes</span>
+          <span class="table-count" id="tbl-count-cristian"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th onclick="sortTable('cristian','NIT Emisor')">NIT emisor ↕</th>
+              <th onclick="sortTable('cristian','Nombre Emisor')">Nombre emisor ↕</th>
+              <th onclick="sortTable('cristian','FACTURA')">Factura ↕</th>
+              <th onclick="sortTable('cristian','Tipo Doc DIAN')">Tipo doc ↕</th>
+              <th onclick="sortTable('cristian','Forma Pago')">Pago ↕</th>
+              <th onclick="sortTable('cristian','Fecha Emisión')">Fecha emisión ↕</th>
+              <th onclick="sortTable('cristian','Total')">Total ↕</th>
+              <th onclick="sortTable('cristian','Estado DIAN')">Estado DIAN ↕</th>
+              <th onclick="sortTable('cristian','Estado Conciliacion')">Estado conciliación ↕</th>
+              <th>Verif.</th>
+            </tr></thead>
+            <tbody id="tbody-cristian">
+              <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div><div class="empty-sub">Cargue los archivos y ejecute el análisis</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LUNA SOFÍA ═══ -->
+    <div id="panel-luna" class="panel-tabs" style="display:none !important;">
+      <div class="stats-bar" id="stats-luna"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-pendiente"><span class="dot dot-red"></span> PENDIENTE EN ARSYS</span> Está en la DIAN pero no se ha contabilizado en Arsys.</div>
+        <div class="legend-item"><span class="badge badge-nota">📝 PENDIENTE (TIENE NOTA)</span> Tiene nota crédito/débito en HKA. Posiblemente anulada.</div>
+        <div class="legend-item"><span class="badge badge-typo">⚠ POSIBLE ERROR DIGITACIÓN</span> La factura existe en Arsys pero con un carácter distinto (prefijo o consecutivo). La flecha → muestra cómo quedó registrada; pase el mouse para ver la corrección.</div>
+        </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, nombre, factura..." oninput="filterTable('luna',this.value)" id="search-luna">
+        <select class="filter-select" onchange="filterByStatus('luna')" id="status-luna">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE EN ARSYS">PENDIENTE EN ARSYS</option>
+          <option value="PENDIENTE (TIENE NOTA)">PENDIENTE (TIENE NOTA)</option>
+          <option value="OK ARSYS">OK ARSYS</option>
+          <option value="POSIBLE ERROR DIGITACIÓN">POSIBLE ERROR DIGITACIÓN</option>
+        </select>
+        <div style="position:relative;display:inline-block;">
+          <button class="btn" style="font-size:12px;" onclick="toggleTercDrop('luna')">👥 Terceros ▾</button>
+          <div id="terc-drop-luna" class="terc-drop">
+            <input class="search-box" style="width:100%;margin-bottom:8px;" placeholder="Buscar tercero..." oninput="renderTercList('luna',this.value)">
+            <label class="terc-item" style="font-weight:700;"><input type="checkbox" onchange="tercAll('luna',this.checked)" id="terc-all-luna"> (Seleccionar todo)</label>
+            <div id="terc-list-luna" class="terc-list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn" style="flex:1;font-size:12px;" onclick="aplicarTerc('luna')">✓ Aplicar</button>
+              <button class="btn" style="flex:1;font-size:12px;" onclick="limpiarTerc('luna')">✕ Limpiar</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn" style="font-size:12px;" onclick="switchPanel('notas')">📝 Ver notas de anulación</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">DIAN vs Arsys — documentos pendientes</span>
+          <span class="table-count" id="tbl-count-luna"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th onclick="sortTable('luna','NIT Emisor')">NIT emisor ↕</th>
+              <th onclick="sortTable('luna','Nombre Emisor')">Nombre emisor ↕</th>
+              <th onclick="sortTable('luna','FACTURA')">Factura ↕</th>
+              <th onclick="sortTable('luna','Tipo Doc DIAN')">Tipo doc ↕</th>
+              <th onclick="sortTable('luna','Fecha Emisión')">Fecha emisión ↕</th>
+              <th onclick="sortTable('luna','Total')">Total ↕</th>
+              <th onclick="sortTable('luna','Nota Asociada')">Nota asociada ↕</th>
+              <th onclick="sortTable('luna','Estado Conciliacion')">Estado conciliación ↕</th>
+              <th>Verif.</th>
+            </tr></thead>
+            <tbody id="tbody-luna">
+              <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div><div class="empty-sub">Cargue los archivos y ejecute el análisis</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DETALLE ORF ═══ -->
+    <div id="panel-orf" class="panel-tabs">
+      <div class="stats-bar" id="stats-orf"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-fact">ORF S.A. BIC · NIT 891100445</span> Cliente y a la vez proveedor. Se excluye del universo general, pero aquí ve el detalle de lo que le emitió a TDH y si está en HKA y Arsys.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar factura, CUFE..." oninput="filterORF()" id="search-orf">
+        <select class="filter-select" onchange="filterORF()" id="status-orf">
+          <option value="">Todas</option>
+          <option value="EN AMBOS">En HKA y Arsys</option>
+          <option value="SOLO HKA">Solo HKA</option>
+          <option value="SOLO ARSYS">Solo Arsys</option>
+          <option value="EN NINGUNO">En ninguno</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">ORF S.A. BIC — documentos emitidos a TDH</span>
+          <span class="table-count" id="tbl-count-orf"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Factura</th><th>Tipo</th><th>Pago</th><th>Fecha</th><th>Total</th>
+              <th>¿En HKA?</th><th>¿En Arsys?</th><th>CUFE</th><th>DIAN</th>
+            </tr></thead>
+            <tbody id="tbody-orf">
+              <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CRUCE COMPLETO ═══ -->
+    <div id="panel-cruce" class="panel-tabs">
+      <div class="stats-bar" id="stats-cruce"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-fact">✓ EN HKA Y EN ARSYS</span> Recibido en HKA y contabilizado en Arsys. Ciclo cerrado.</div>
+        <div class="legend-item"><span class="badge badge-typo">EN HKA, NO EN ARSYS</span> Recibido en HKA pero todavía sin causar en Arsys.</div>
+        <div class="legend-item"><span class="badge badge-nota">NO EN HKA, SÍ EN ARSYS</span> Contabilizado en Arsys sin haber pasado por HKA — revisar el flujo de recepción.</div>
+        <div class="legend-item"><span class="badge badge-pendiente"><span class="dot dot-red"></span>NO EN HKA NI EN ARSYS</span> Está en la DIAN pero no se recibió ni se contabilizó — crítico.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, nombre, factura..." oninput="filterCruce()" id="search-cruce">
+        <select class="filter-select" onchange="filterCruce()" id="status-cruce">
+          <option value="">Todas las situaciones</option>
+          <option value="EN HKA Y EN ARSYS">EN HKA Y EN ARSYS</option>
+          <option value="EN HKA, NO EN ARSYS">EN HKA, NO EN ARSYS</option>
+          <option value="NO EN HKA, SÍ EN ARSYS">NO EN HKA, SÍ EN ARSYS</option>
+          <option value="NO EN HKA NI EN ARSYS">NO EN HKA NI EN ARSYS</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">Cruce completo DIAN → HKA → Arsys</span>
+          <span class="table-count" id="tbl-count-cruce"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>NIT emisor</th><th>Nombre emisor</th><th>Factura</th><th>Tipo</th><th>Pago</th>
+              <th>Fecha</th><th>Total</th><th>¿En HKA?</th><th>¿En Arsys?</th><th>Situación</th><th>DIAN</th>
+            </tr></thead>
+            <tbody id="tbody-cruce">
+              <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NOTAS DE MANTENIMIENTO ═══ -->
+    <div id="panel-notas" class="panel-tabs">
+      <div class="stats-bar" id="stats-notas"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-nota">📝 NOTAS</span> Notas crédito/débito detectadas en HKA, con la factura que afectan.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar nota, factura, proveedor..." oninput="filterNotas(this.value)" id="search-notas">
+        <button class="btn" style="font-size:12px;" onclick="switchPanel('luna')">← Volver a Luna Sofía</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">Notas crédito/débito de proveedores</span>
+          <span class="table-count" id="tbl-count-notas"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>NIT emisor</th>
+              <th>Proveedor</th>
+              <th>Nº nota</th>
+              <th>Tipo</th>
+              <th>Factura que afecta</th>
+              <th>Valor</th>
+            </tr></thead>
+            <tbody id="tbody-notas">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── LOGO ──
+const LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAekAAACsCAYAAABfLFT8AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMTM4IDc5LjE1OTgyNCwgMjAxNi8wOS8xNC0wMTowOTowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTcgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjU5M0Y0RTBDNEFGQTExRTdCOUJDOTdDOTFFODlENzY3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjU5M0Y0RTBENEFGQTExRTdCOUJDOTdDOTFFODlENzY3Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NTkzRjRFMEE0QUZBMTFFN0I5QkM5N0M5MUU4OUQ3NjciIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NTkzRjRFMEI0QUZBMTFFN0I5QkM5N0M5MUU4OUQ3NjciLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4DHLIsAABIb0lEQVR42uyd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';
+document.getElementById('logo-img').src = 'data:image/png;base64,' + LOGO_B64;
+
+// ── STATE ──
+const state = {
+  files: { dian:null, hka:null, arsys:null, prov:null },
+  results: { cristian:[], luna:[] },
+  filtered: { cristian:[], luna:[] },
+  sort: { cristian:{col:null,asc:true}, luna:{col:null,asc:true} },
+  currentPanel: 'upload'
+};
+
+// ── FILE HANDLING ──
+function handleFile(e, key) {
+  const file = e.target.files[0]; if (!file) return;
+  state.files[key] = file;
+  ['dz-'+key, 'uz-'+key].forEach(id => document.getElementById(id)?.classList.add('loaded'));
+  document.getElementById('dz-'+key+'-lbl').textContent = '✓ ' + file.name;
+  document.getElementById('dz-'+key+'-lbl').className = 'dz-label ok';
+  document.getElementById('uz-'+key+'-lbl').textContent = '✓ ' + file.name.substring(0,22);
+  checkReady();
+}
+function handleSideFile(e, key) { handleFile(e, key); }
+function checkReady() {
+  const ok = state.files.dian && state.files.hka && state.files.arsys;
+  ['btn-run','btn-run2'].forEach(id => document.getElementById(id).disabled = !ok);
+}
+
+// ── EXCEL / CSV ──
+function readExcel(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    const esCSV = /\.csv$/i.test(file.name);
+    r.onload = e => {
+      try {
+        if (esCSV) {
+          // CSV puede venir en latin1 (ISO-8859) con separador ; — decodificar y parsear robusto
+          let txt;
+          try { txt = new TextDecoder('utf-8', {fatal:true}).decode(e.target.result); }
+          catch { txt = new TextDecoder('iso-8859-1').decode(e.target.result); }
+          res(XLSX.read(txt, {type:'string', cellDates:true, raw:false, FS:';'}));
+        } else {
+          res(XLSX.read(e.target.result, {type:'array', cellDates:true}));
+        }
+      } catch(err) { rej(err); }
+    };
+    r.readAsArrayBuffer(file);
+  });
+}
+function sheetToRows(wb, sheetName, headerRow=0) {
+  const ws = wb.Sheets[sheetName]; if (!ws) return [];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  if (data.length <= headerRow) return [];
+  const headers = data[headerRow].map(h => String(h).trim());
+  return data.slice(headerRow+1).map(row => {
+    const obj = {}; headers.forEach((h,j) => obj[h] = row[j] ?? ''); return obj;
+  });
+}
+function nit(v) {
+  if (v === null || v === undefined || v === '') return '';
+  let s = String(v).trim();
+  if (typeof v === 'number') s = String(Math.round(v));
+  s = s.replace(/\.0+$/, '');        // quitar decimales .0
+  s = s.replace(/,/g, '');           // quitar separadores de miles
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); // 1.075.289.621
+  s = s.replace(/[^0-9].*$/, '');    // quitar dígito verificación: 28612304X -> 28612304
+  return s;
+}
+function fac(v) { return String(v??'').trim().replace(/\.0$/,''); }
+function date(v) {
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().slice(0,10);
+  let s = String(v).trim();
+  // DD-MM-YYYY o DD/MM/YYYY → YYYY-MM-DD
+  const m = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+  if (m) return m[3] + '-' + m[2] + '-' + m[1];
+  return s.slice(0,10);
+}
+// Convierte 'YYYY-MM-DD' a objeto Date (o null)
+function parseDate(s) {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3]);
+}
+// Días transcurridos desde una fecha hasta hoy
+function diasDesde(s) {
+  const d = parseDate(s);
+  if (!d) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+function money(v) {
+  const n = parseFloat(v); if (isNaN(n)) return '';
+  return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+}
+
+// ── DETECCIÓN TOLERANTE DE COLUMNAS ──
+// Normaliza un nombre de columna: minúsculas, sin acentos, sin espacios/símbolos
+function normKey(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+    .replace(/[^a-z0-9]/g, '');                        // quitar espacios y símbolos
+}
+// Busca en una fila la primera columna cuyo nombre normalizado coincide con algún patrón
+function findCol(headers, patterns) {
+  const norm = headers.map(h => ({ raw: h, n: normKey(h) }));
+  for (const p of patterns) {
+    const pn = normKey(p);
+    // 1) coincidencia exacta normalizada
+    let hit = norm.find(h => h.n === pn);
+    if (hit) return hit.raw;
+  }
+  for (const p of patterns) {
+    const pn = normKey(p);
+    // 2) coincidencia por inclusión
+    let hit = norm.find(h => h.n.includes(pn));
+    if (hit) return hit.raw;
+  }
+  return null;
+}
+// Encuentra la fila de encabezado real buscando la que contenga alguno de los patrones
+function findHeaderRow(data, patterns, maxScan = 20) {
+  for (let i = 0; i < Math.min(maxScan, data.length); i++) {
+    const norm = data[i].map(c => normKey(c));
+    if (patterns.some(p => norm.includes(normKey(p)))) return i;
+  }
+  return 0;
+}
+// Elige la hoja más probable: la que tenga más columnas objetivo
+function pickSheet(wb, patterns) {
+  let best = wb.SheetNames[0], bestScore = -1;
+  for (const sn of wb.SheetNames) {
+    const ws = wb.Sheets[sn];
+    const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    let score = 0;
+    for (let i = 0; i < Math.min(20, data.length); i++) {
+      const norm = data[i].map(c => normKey(c));
+      score = Math.max(score, patterns.filter(p => norm.includes(normKey(p))).length);
+    }
+    if (score > bestScore) { bestScore = score; best = sn; }
+  }
+  return best;
+}
+
+// ── ETL ──
+// NITs que generan ruido y se excluyen del análisis:
+//  - Peajes electrónicos (900470252): documentos 24/7 por consolidado, no van a HKA.
+//  - Tecnología Funcional (901485278): pólizas, demasiadas facturas.
+//  - COESCO (901300741), Grupo EDS Autogas (900459737), Combured (900675169) y otros proveedores de transporte colados: excluidos por solicitud.
+//  - Proveedores de transporte (terceros): TDH solo toma la comisión, no el gasto.
+//  - Clientes: facturas por faltantes emitidas a nombre de TDH, que no constituyen venta.
+const NITS_EXCLUIDOS_FIJOS = new Set(['900470252','901485278','901300741','900459737','900675169','1076651071','1074158878','900924856','2997387','1073520687','11319360','2997087','3155697']);
+// Clientes de TDH: facturan a nombre de TDH por faltantes; fiscalmente no es una venta → ruido.
+const NITS_CLIENTES = new Set(['1010223754','12111956','12124796','12129428','17150081','17347475','222222000000','28711035','36160056','76331856','800020220','800023421','800023551','800049934','800070196','800107548','800146425','800148312','800170695','800192034','800221724','800244699','800251710','802002435','805007853','805020771','806012339','808004144','809012233','811036384','813002521','817001672','830006735','830045034','830050369','830069680','830071847','830095890','830102401','830107012','830510909','83057759','836000548','860000898','860000996','860002302','860004828','860006160','860006333','860007538','860009694','860010973','860020439','860026895','860029995','860035482','860045178','860072317','860504882','860511458','860517272','860521637','860525060','860527960','890105214','890106814','890201988','890207037','890800718','890900291','890901271','890909001','890927624','890935085','891100296','891100321','891100445','891101158','891103095','891300237','891300238','891300241','891304762','891500231','891500831','891903333','900010692','900015051','900020971','900044642','900068426','900110594','900125919','900146840','900169492','900174478','900183392','900207183','900298939','900308092','900315039','900322900','900326456','900326523','900326576','900335451','900379714','900396240','900396965','900396967','900404036','900411999','900415486','900421224','900433421','900474780','900475248','900484906','900488394','900491573','900506925','900517378','900527020','900541039','900560774','900570383','900571820','900624028','900628705','900692913','900713955','900742089','900742771','900754877','900824282','900849269','900849782','900863582','900906634','900952848','900965222','900980892','901012419','901018361','901053781','901056730','901070150','901083852','901091829','901097647','901130294','901149189','901150950','901167369','901174177','901180592','901221830','901253217','901266998','901302387','901306093','901326514','901352950','901355917','901373083','901383798','901391709','901417694','901469592','901498937','901515428','901564957','901633554','901679401','901679501','901708572','901753774','901761363','901837969','901840455','901860173','901864390','901896361','901916272','901931506','901965023','93413567']);
+// Se llena al cargar el listado de proveedores de transporte (opcional).
+let NITS_TRANSPORTE = new Set(['10001204','1000873620','1000919486','1001193499','1002457495','1002528304','1002744313','1003535262','1003739306','1003739350','1003739972','1003866008','1004674887','1004675389','1004753103','1005089679','1005771368','1006125079','1006463344','1007297264','1007674761','1007674963','1010161585','1010194328','1012401978','1012436878','1013581158','1013607815','10143579','1015412751','1017176828','1018434996','1020408628','1020450294','1022333003','1022357387','1022368669','1022380420','10227139','10227827','1022965116','1023000141','1023002458','1023866571','1023888716','1023908573','1023932082','10243700','1024465291','10263008','1026585641','1026592590','1026594591','10303966','1031123517','1032453915','1033718677','1036622005','1037322556','1038413775','1038415801','1038771815','1039688757','1040744729','1045738556','1045749799','1049609466','1049623241','1049626723','1049641921','1049653662','1051589561','1051589924','1051590008','1051954394','1051955682','1052386872','1052388368','1052388739','1052402331','1052402357','1052405080','10530664','1053442138','1053587013','1053781620','1053790787','1053809538','1053816240','1053873790','1054374054','10546532','10547066','1054801322','1054916369','1054920283','1054923663','1055186186','1055313020','1055836620','1056955407','1057464448','1057547671','1057570210','1057571760','1057581874','1057594335','1057600452','1058430389','10590454','10591114','1060651487','1061720530','1061745998','1061746979','1061747148','1061765421','1061770724','1061794030','1065812272','1069723989','1069725487','1069730115','1069738107','1069748406','1069754131','1070009422','1070584735','1070750565','1070751801','1070753043','1071166900','1071302314','1071303044','1071303105','1071303108','1072492511','1072639587','1072719816','1072720549','1074129042','1074130448','1074130949','1074132526','1074133001','1074133785','1074134133','1074134864','1074134903','1074135277','1074135851','1074158230','1074158388','1074158613','1074158635','1074158716','1074159036','1074159184','1074159229','1074159384','1074159662','1074159754','1074160163','1074160693','1075216142','1075219562','1075222322','1075227901','1075228316','1075229027','1075238379','1075239649','1075241275','1075247878','1075253753','1075272940','1075273711','1075278012','1075280929','1075287059','1075299374','1075303169','1075310460','10754832','1075541301','1075673577','1077854186','1077967052','1078246312','1078748931','1078749528','1079389061','1080362863','1080363090','1081422162','1081592501','1082124412','1082125554','1082803326','1083875760','1083876907','1083880786','1083891589','1083892410','1083909574','1083915125','1083916218','1083924103','1083924677','1084550298','1084735469','1085045883','1085255188','1085305335','1085660831','1085662110','1086923362','1087414095','1087418311','1088007767','1088261943','1088262913','1088268442','1088973731','1088973811','1089478446','1089482662','1089482944','1089484965','1089487498','1090336769','1091672399','1094926136','1094935269','1094971205','1096188080','1097033394','1097039484','1097388524','1097403374','1097609675','1098406730','1098624588','1098794999','1101752779','1102357394','1105676369','1106738398','1106786519','1106787848','1106791032','1109418091','1109420698','1110453015','1110453447','1110488381','1110509362','1110524814','1110535178','1110538520','1110542326','1110569483','1110575246','1110595172','1113040728','1114735214','1117488501','1118305286','1119218031','11200870','1121838830','1121879453','1121881991','1121882068','1121884980','1121895211','1121895738','1122123237','11229549','11255759','1127453388','1128270335','1128406893','1128449041','1129528819','1130625623','11308413','1131084173','1131085164','11338622','1136884195','11377721','11380044','11381573','11382339','11382947','11385976','11386281','11387393','11388779','11405621','11408642','11409177','11409240','11409732','11410434','11410465','11410672','11411289','11411361','11411641','11411746','11411821','11411832','11411951','11412078','11412630','11412635','11412699','11413065','11413066','11413452','11413456','11413476','11413546','1144093595','1152205209','1152437274','1152449978','1193072036','1193137564','12107577','12113344','12113795','12114750','12114997','12115815','12120561','12120780','12125024','12125321','12130145','12131573','12132502','12132600','12133001','12136742','12142699','12142770','1214740010','12171607','12190304','12191136','12192897','12195012','12199688','12199842','12201354','12202187','12203572','12207339','12227639','12230037','12233643','12236084','12236523','12238921','12239444','12241675','12252333','12265787','12269531','12274675','12275464','12276599','12280135','1234643480','1234790295','12459661','12753921','12926019','12997144','13040536','13059268','13061763','13064359','13068735','13924121','13992666','13994251','14010146','14105063','14106656','14226872','14236484','14239233','14244031','14257072','14257854','14258222','14963115','15287556','15384305','15442229','15817182','15914521','16349645','16456526','16634329','16638125','16770180','16800535','16800896','17114384','17123229','17310439','17312930','17334478','17334687','17386902','17641619','18388601','18390806','18391732','18392214','18393174','18396679','18397404','18398049','18401600','18496105','18518544','18519906','18522010','18594086','18616067','19112245','19150050','19159801','19177054','19216297','19227686','19229868','19288384','19333762','19343472','19364743','19375681','19379578','19411886','194160','19459930','19474905','19476391','19492755','20339954','20441130','20476599','20546418','20546480','20823923','20856061','20856135','20886915','20887300','21068340','21228737','21230084','21466110','218133','218241','23423790','23551369','23926920','24019573','24176782','24370073','24388240','245453','24582361','24602775','24626556','25078282','25155717','25162768','25165225','25215304','25279025','25285133','25619366','26431682','26432879','26519478','26606276','27090803','27751909','28482954','28681636','28866354','28915669','29325982','2956156','29816991','2982424','2995961','2996400','2996404','2996460','29965365','2996596','2996705','2996738','2996757','2996815','2996856','2996923','2996962','2997050','2997084','2997304','2997366','30203057','30203320','3023154','30288905','3038919','3042161','3056181','30713889','31228753','3129226','3140478','3142642','3147277','3155906','31910233','31916375','31932601','3195055','31966188','31986253','3223510','3229586','3242172','3242454','32524248','3356110','33750556','33816761','3414271','34445938','34557528','35254632','35263816','35458703','36069101','36112713','36177955','36181751','36273237','36276995','36282614','36283877','36300152','36300884','36309541','36309676','36697795','37543502','37822392','38257779','3836682','38562192','39446867','39614371','39729788','39731813','40188287','40766350','40769732','4083637','4112268','4118785','4119830','4119848','4119853','4128794','41633034','41716064','41894308','41908311','41920871','41944008','42164965','4237067','4252348','4252487','4252962','4274089','4276588','4276855','43507824','43599992','4401343','4576415','46354068','46378536','46450864','46454968','47429380','4895018','49732787','51853318','51892731','51911149','51983108','51996429','52018314','5203224','52260431','52283772','52312740','52328275','52341893','52365308','52367113','52416240','52434077','52495658','52781018','52981974','53003874','53032044','53099565','53100348','53120622','5339519','5340462','55069788','55114837','55153743','55164446','55168065','55168952','55177191','55190922','55220281','57291353','5819854','5823625','5824550','5833350','5858224','59708092','59708447','5972732','59861499','6009777','6155232','63474902','65634341','65706823','65736985','65762380','65769462','65782978','65807255','66771226','6755882','6767052','6767242','6794727','6801212','69086837','70052857','70116160','70161099','70414921','70418195','70569055','70728274','70825709','70908749','70908889','70909320','70955175','7120044','71226838','71383813','71480897','71581745','71588243','7161622','7167077','7167354','7167951','7172082','7172433','71728673','7176988','71771804','71774484','71777752','7182045','7183730','7185825','7187571','71975080','7213721','7215050','7219745','7221480','7221613','7222965','7227099','7227444','7227695','7228151','72294301','72326081','73116544','7350384','74081771','74181623','74183417','74187637','74187657','74270435','74321570','74334111','74356752','74360586','74370347','74370428','74370640','74371174','74371816','74373220','74375654','74381283','74381306','74381651','74382319','74433724','75077371','75147292','7549987','7555856','7558892','76150503','76219714','76325233','76329405','76331434','76332647','7685877','7687661','7688286','7689364','7689982','7692463','7699321','7701789','7702949','7703083','77036756','7708780','7708992','77091191','7710257','7710622','7712550','7714709','7714753','7715865','77195864','7721041','7721912','7727195','7732266','78698027','79000416','79134435','79163855','79167329','79169379','79171121','79204138','79272130','79272548','79284999','79292087','79306421','79347508','79364741','79367124','79370851','79379294','79396984','79406938','79410441','79446934','79473863','79480789','79497109','79501358','79506005','79514485','79522642','79523148','79574793','79580486','79594350','79636916','79663969','79690338','79700805','79702036','79705127','79712405','79712740','79724961','79740054','79746614','79760576','79761230','79812440','79846314','79862010','79867292','79890766','79926346','79955761','800075672','80035556','80035795','80062099','80094659','80112500','80245531','80386718','80421723','80434795','80436562','80472780','80498178','80498223','8063269','80721645','80761292','80778775','80793945','80798983','80807934','80903525','811011786','813004147','813008035','813009676','819005159','82391409','82392281','830099026','83043612','83116844','83181872','83227108','83231542','83233161','83251981','83256018','8359892','84041942','8434562','860067853','86070066','86081787','86087126','87027753','87218483','87245768','87514174','87530299','8785836','88139453','890700483','891101158','891102742','900011368','900113487','900163354','900176548','900231243','900361492','900363219','900380892','900528073','900529119','900552625','900573228','900585856','900618981','900673361','900690914','900704830','900715210','900787278','900811904','900856709','900859715','900899819','900928314','900992326','901144913','901201368','901212465','901216213','901241684','901252118','901266180','901270291','901328904','901346593','901360239','901362259','901367496','901414944','901435190','901460719','901473955','901486291','901534396','901570140','901589176','901611131','901635550','901669141','901676282','901691610','901710098','901732214','901741145','901743997','901761364','901802280','901865994','901887830','901958534','901959176','901962225','901977724','901998924','902030676','91043340','91069339','91071156','91108826','91242227','91261913','91277000','91289780','91320997','91439687','91451401','91466620','91495497','92520357','93120137','93129406','93133685','93206984','93236435','93238686','93341201','93369825','93370906','93374722','93379531','93383940','93389674','93396964','93406318','93406592','93412022','93451822','93451967','94266558','9431550','94350585','94369675','94372014','94390108','94457567','9519933','9525006','9527157','9531218','9532327','96195141','96353542','9697888','9777391','98135486','98290793','98322279','98323220','98323366','98323377','98323676','98323904','98379488','98382375','98383036','98383732','98395842','98509386','98534147','98565885','98704556','9892522']);
+function esNitExcluido(n) {
+  return NITS_EXCLUIDOS_FIJOS.has(n) || NITS_CLIENTES.has(n) || NITS_TRANSPORTE.has(n);
+}
+// Lee el listado de proveedores de transporte y devuelve un Set de NITs a excluir.
+function etlTransporte(wb) {
+  const sheet = pickSheet(wb, ['DOCUMENTO','POSEEDOR','NIT','Documento']);
+  const data = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header:1, defval:'' });
+  const hi = findHeaderRow(data, ['DOCUMENTO','POSEEDOR','NIT','Cedula']);
+  const H = data[hi].map(h => String(h).trim());
+  const cDoc = findCol(H, ['DOCUMENTO','NIT','Cedula','Identificacion','Documento']);
+  const out = new Set();
+  for (let i = hi+1; i < data.length; i++) {
+    const row = data[i];
+    const v = cDoc ? row[H.indexOf(cDoc)] : '';
+    const n = nit(v);
+    if (n) out.add(n);
+  }
+  return out;
+}
+
+function etlDIAN(wb) {
+  const sheet = pickSheet(wb, ['Prefijo','Folio','NIT Emisor','Grupo']);
+  const ws = wb.Sheets[sheet];
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  const hi = findHeaderRow(data, ['NIT Emisor','Prefijo','Grupo','Folio']);
+  const H = data[hi].map(h => String(h).trim());
+
+  const cPref  = findCol(H, ['Prefijo','Pref']);
+  const cFolio = findCol(H, ['Folio','Consecutivo','Numero']);
+  const cNit   = findCol(H, ['NIT Emisor','NitEmisor','Nit del Emisor','Documento Emisor']);
+  const cNom   = findCol(H, ['Nombre Emisor','Razon Social Emisor','Emisor']);
+  const cGrupo = findCol(H, ['Grupo','Tipo']);
+  const cForma = findCol(H, ['Forma de Pago','FormaPago','Forma Pago']);
+  const cTipo  = findCol(H, ['Tipo de documento','Tipo Documento','Tipo Doc']);
+  const cFecha = findCol(H, ['Fecha Emision','Fecha de Emision','Fecha Emisión']);
+  const cTotal = findCol(H, ['Total','Valor Total','Valor']);
+  const cEstado= findCol(H, ['Estado','Estatus']);
+  const cCufe  = findCol(H, ['CUFE/CUDE','CUFE','CUDE','CUFE CUDE']);
+
+  const rows = [];
+  const rowsORF = [];
+  for (let i = hi + 1; i < data.length; i++) {
+    const row = data[i];
+    if (row.every(v => v === '' || v === null || v === undefined)) continue;
+    const get = c => c ? (row[H.indexOf(c)] ?? '') : '';
+    const grupo = String(get(cGrupo)).trim().toUpperCase();
+    if (grupo !== 'RECIBIDO') continue; // solo compras
+    const tipoDoc = String(get(cTipo)||'').trim();
+    const tl = tipoDoc.toLowerCase();
+    const esNota = /nota/i.test(tipoDoc); // nota de crédito/débito electrónica
+    const esFactura = /factura/i.test(tl);
+    // Solo entran facturas electrónicas y notas. Se excluye "Application response",
+    // documentos equivalentes, soporte, etc. (no son facturas de compra a conciliar).
+    if (!esNota && !esFactura) continue;
+    const n = nit(get(cNit));
+    const forma = String(get(cForma)).trim().replace(/\.0+$/,'');
+    const f = fac(get(cPref)) + fac(get(cFolio));
+    if (!f) continue;
+    const doc = {
+      FACTURA: f, 'NIT Emisor': n,
+      'Nombre Emisor': String(get(cNom)||'').trim(),
+      'Fecha Emisión': date(get(cFecha)),
+      Total: get(cTotal) || 0,
+      'Estado DIAN': String(get(cEstado)||'').trim(),
+      'CUFE': String(get(cCufe)||'').trim(),
+      'Tipo Doc DIAN': esNota ? 'Nota' : 'Factura',
+      'Forma Pago': forma === '1' ? 'Contado' : forma === '2' ? 'Crédito' : forma,
+      LLAVE: f + '|' + n
+    };
+    // ORF S.A. BIC (mayor cliente y también proveedor): se excluye del universo
+    // pero se guarda aparte para su reporte de detalle específico.
+    if (n === '891100445') rowsORF.push(doc);
+    if (esNitExcluido(n)) continue; // peajes, pólizas, transporte, clientes → ruido
+    rows.push(doc);
+  }
+  rows._orf = rowsORF;
+  return rows;
+}
+
+function etlHKA(wb) {
+  const sheet = pickSheet(wb, ['Nro de documento','Numero de identificacion','Factura','NIT Emisor']);
+  const ws = wb.Sheets[sheet];
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true });
+  const hi = findHeaderRow(data, ['Nro de documento','Factura','Numero de identificacion','NIT Emisor']);
+  const H = data[hi].map(h => String(h).trim());
+
+  const cFac = findCol(H, ['Nro de documento','Numero de documento','Factura','Documento']);
+  const cNit = findCol(H, ['Numero de identificacion','NIT Emisor','Identificacion','NIT']);
+  const cProv= findCol(H, ['Proveedor','Nombre Proveedor','Emisor']);
+  const cEst = findCol(H, ['Estatus Actual del Documento','Estatus','Estado']);
+  const cTipo= findCol(H, ['Tipo de Documento','Tipo Documento','Tipo Doc']);
+  const cRef = findCol(H, ['Factura Referenciada','Documento Referenciado','Referencia']);
+  const cTot = findCol(H, ['TOTAL FACTURA','Total Factura','Total','Valor']);
+
+  const rows = [];   // facturas
+  const notas = [];  // notas crédito/débito
+  for (let i = hi + 1; i < data.length; i++) {
+    const row = data[i];
+    if (row.every(v => v === '' || v === null || v === undefined)) continue;
+    const get = c => c ? (row[H.indexOf(c)] ?? '') : '';
+    const facStr = fac(get(cFac));
+    const nitStr = nit(get(cNit));
+    if (!facStr) continue;
+    const tipo = String(get(cTipo)||'').trim();
+    const esNota = /nota/i.test(tipo); // NOTA DE CRÉDITO / NOTA DE DÉBITO
+    const base = {
+      FACTURA: facStr, 'NIT Emisor': nitStr,
+      Proveedor: String(get(cProv)||'').trim(),
+      'Estatus HKA': String(get(cEst)||'').trim(),
+      'Tipo Doc': tipo,
+      'Factura Referenciada': fac(get(cRef)),
+      Total: parseFloat(get(cTot)) || 0,
+      LLAVE: facStr + '|' + nitStr
+    };
+    if (esNota) {
+      // llave por factura referenciada para vincular con la factura que anula
+      base.LLAVE_REF = base['Factura Referenciada'] + '|' + nitStr;
+      notas.push(base);
+    } else {
+      rows.push(base);
+    }
+  }
+  rows._notas = notas; // adjuntar notas al resultado
+  return rows;
+}
+
+// Tipos de documento contable válidos (causaciones de compra de proveedor).
+// Los que terminan en XXX/XX van seguidos de número de sede.
+const TIPOS_ARSYS = ['ABAR','ABEL','ABGT','ABTU','ACAR','ACCXX','ADEXX','ADOS','AESP','AIBG',
+  'ANEV','APIT','APOP','AVEH','AYUM','CCXXX','DBAR','DBEL','DBGT','DBTU','DBUC','DCAR','DDOS',
+  'DEXX','DESP','DIBA','DNEV','DPIT','DPOP','DVEH','DVIL','DYUM','NCPXX','NDPXX'];
+// Compilar patrones: XXX→\d{1,3}, XX→\d{1,2}, resto exacto
+const TIPOS_ARSYS_RE = TIPOS_ARSYS.map(t => {
+  if (t.endsWith('XXX')) return new RegExp('^' + t.slice(0,-3) + '\\d{1,3}$');
+  if (t.endsWith('XX'))  return new RegExp('^' + t.slice(0,-2) + '\\d{1,2}$');
+  return new RegExp('^' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '$');
+});
+// Bases (prefijo alfabético) para detectar tipos similares no mapeados
+const TIPOS_ARSYS_BASES = [...new Set(TIPOS_ARSYS.map(t => t.replace(/X+$/,'')))].filter(b => b.length>=3);
+function tipoArsysValido(code) { return TIPOS_ARSYS_RE.some(re => re.test(code)); }
+function tipoArsysSimilar(code) {
+  if (tipoArsysValido(code)) return false;
+  return TIPOS_ARSYS_BASES.some(b => code.startsWith(b));
+}
+
+function etlARSYS(wb) {
+  const sheet = pickSheet(wb, ['nombreUsuario','Clase_Documento_Contable','prefijoNumeroReferenciaDocumento','Tercero']);
+  const ws = wb.Sheets[sheet];
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  const hi = findHeaderRow(data, ['nombreUsuario','Tercero','Clase_Documento_Contable','prefijoNumeroReferenciaDocumento']);
+  const H = data[hi].map(h => String(h).trim());
+
+  const cClase= findCol(H, ['Clase_Documento_Contable','Clase Documento','Clase Documento Contable','Tipo Documento']);
+  const cPref = findCol(H, ['prefijoNumeroReferenciaDocumento','prefijo Numero Referencia','Prefijo Referencia','Prefijo']);
+  const cNum  = findCol(H, ['NumDocProveedor','Numero Documento Proveedor','Consecutivo Proveedor','Numero Proveedor']);
+  const cTerc = findCol(H, ['Tercero','Proveedor','NIT Tercero']);
+
+  const seen = new Set(), result = [];
+  const noMapeados = {}; // código -> conteo, para avisar de tipos similares no incluidos
+  for (let i = hi + 1; i < data.length; i++) {
+    const row = data[i];
+    const get = c => c ? (row[H.indexOf(c)] ?? '') : '';
+    const clase = String(get(cClase)||'');
+    const code = clase.split(' ')[0].split('-')[0].trim();
+    if (!code) continue;
+    if (!tipoArsysValido(code)) {
+      if (tipoArsysSimilar(code)) noMapeados[code] = (noMapeados[code]||0) + 1;
+      continue;
+    }
+    const f = fac(get(cPref)) + fac(get(cNum));
+    if (!f) continue; // sin prefijo/consecutivo no se puede cruzar (se valida por saldos en otra fase)
+    const parts = String(get(cTerc)||'').split(' - ');
+    const n = nit(parts[0]), nombre = parts.slice(1).join(' - ').trim();
+    const esNota = /^(NCP|NDP)/.test(code);
+    const llave = f + '|' + n;
+    if (!seen.has(llave)) {
+      seen.add(llave);
+      result.push({ FACTURA:f, 'NIT Emisor':n, 'Nombre Arsys':nombre, 'Tipo Arsys':code,
+                    'Es Nota': esNota, LLAVE:llave });
+    }
+  }
+  result._noMapeados = noMapeados;
+  return result;
+}
+
+function etlProv(wb) {
+  const map = {};
+  const sheet = pickSheet(wb, ['Nit Emisor','NIT Emisor','Proveedores','NIT']);
+  const ws = wb.Sheets[sheet];
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  const hi = findHeaderRow(data, ['Nit Emisor','NIT Emisor','NIT','Proveedores']);
+  const H = data[hi].map(h => String(h).trim());
+
+  const cNit = findCol(H, ['Nit Emisor','NIT Emisor','NIT','Documento','Identificacion']);
+  const cNom = findCol(H, ['Proveedores','Proveedor','Nombre','Razon Social']);
+
+  for (let i = hi + 1; i < data.length; i++) {
+    const row = data[i];
+    const get = c => c ? (row[H.indexOf(c)] ?? '') : '';
+    const n = nit(get(cNit));
+    if (n) map[n] = String(get(cNom)||'').trim();
+  }
+  return map;
+}
+
+// ── ANALYSIS ──
+// Distancia de edición (Levenshtein) para detectar errores de digitación
+function editDist(a, b) {
+  a = String(a); b = String(b);
+  if (a.length < b.length) { const t=a; a=b; b=t; }
+  if (b.length === 0) return a.length;
+  let prev = Array.from({length: b.length+1}, (_,i)=>i);
+  for (let i=0; i<a.length; i++) {
+    let cur = [i+1];
+    for (let j=0; j<b.length; j++)
+      cur.push(Math.min(prev[j+1]+1, cur[j]+1, prev[j]+(a[i]!==b[j]?1:0)));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+// Detecta transposición de 2 caracteres adyacentes (FVE↔FEV, 89↔98)
+function esTransposicion(a, b) {
+  if (a.length !== b.length) return false;
+  const diff = [];
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i);
+  return diff.length === 2 && diff[1] === diff[0]+1 &&
+         a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]];
+}
+// Busca en 'targets' (mismo NIT) una factura que parezca la misma con un error de digitación.
+// Estricto para evitar falsos positivos: solo 1 carácter cambiado (misma longitud) o transposición adyacente.
+function findTypo(factura, nit, targetsByNit) {
+  const cands = targetsByNit[nit] || [];
+  for (const t of cands) {
+    if (t === factura) continue;
+    if (factura.length === t.length) {
+      const d = editDist(factura, t);
+      if (d === 1) return t;                 // un solo carácter distinto
+      if (d === 2 && esTransposicion(factura, t)) return t; // dos chars intercambiados
+    }
+  }
+  return null;
+}
+
+function analysisHKA(dian, hka) {
+  // El set de cruce incluye facturas Y notas de HKA (las notas DIAN cruzan contra las notas HKA)
+  const hkaSet = new Set(hka.map(r => r.LLAVE));
+  (hka._notas || []).forEach(n => hkaSet.add(n.LLAVE));
+  const hkaByNit = {};
+  hka.forEach(r => { (hkaByNit[r['NIT Emisor']] = hkaByNit[r['NIT Emisor']] || []).push(r.FACTURA); });
+  (hka._notas || []).forEach(n => { (hkaByNit[n['NIT Emisor']] = hkaByNit[n['NIT Emisor']] || []).push(n.FACTURA); });
+  // Devuelve TODOS los documentos DIAN, con estado OK si ya están en HKA
+  return dian.map(r => {
+    if (hkaSet.has(r.LLAVE)) return { ...r, 'Estado Conciliacion':'OK HKA', 'Referencia HKA':'' };
+    const typoMatch = findTypo(r.FACTURA, r['NIT Emisor'], hkaByNit);
+    const estado = typoMatch ? 'POSIBLE ERROR DIGITACIÓN' : 'PENDIENTE EN HKA';
+    return { ...r, 'Estado Conciliacion': estado, 'Referencia HKA': typoMatch || '' };
+  });
+}
+
+function analysisArsys(dian, arsys, notas) {
+  const arsysSet = new Set(arsys.map(r => r.LLAVE));
+  const notasPorFactura = {};
+  (notas || []).forEach(n => {
+    if (!n.LLAVE_REF) return;
+    (notasPorFactura[n.LLAVE_REF] = notasPorFactura[n.LLAVE_REF] || []).push(n);
+  });
+  const arsysByNit = {};
+  arsys.forEach(r => { (arsysByNit[r['NIT Emisor']] = arsysByNit[r['NIT Emisor']] || []).push(r.FACTURA); });
+  return dian.map(r => {
+    if (arsysSet.has(r.LLAVE))
+      return { ...r, 'Estado Conciliacion':'OK ARSYS', 'Referencia Arsys':'', 'Nota Asociada':'', 'Valor Nota':0 };
+    const typoMatch = findTypo(r.FACTURA, r['NIT Emisor'], arsysByNit);
+    const hasTypo = !!typoMatch;
+    const notasDeEsta = notasPorFactura[r.LLAVE] || [];
+    const tieneNota = notasDeEsta.length > 0;
+    let estado;
+    if (hasTypo) estado = 'POSIBLE ERROR DIGITACIÓN';
+    else if (tieneNota) estado = 'PENDIENTE (TIENE NOTA)';
+    else estado = 'PENDIENTE EN ARSYS';
+    return { ...r,
+             'Estado Conciliacion': estado,
+             'Referencia Arsys': hasTypo ? typoMatch : '',
+             'Nota Asociada': tieneNota ? notasDeEsta.map(n=>n.FACTURA).join(', ') : '',
+             'Valor Nota': tieneNota ? notasDeEsta.reduce((s,n)=>s+(n.Total||0),0) : 0 };
+  });
+}
+
+// ── RUN ──
+async function runAll() {
+  setProgress(5,'Leyendo archivos...');
+  document.getElementById('progress-section').style.display = 'block';
+  const delay = ms => new Promise(r => setTimeout(r,ms));
+
+  const [wbD,wbH,wbA] = await Promise.all([
+    readExcel(state.files.dian), readExcel(state.files.hka),
+    readExcel(state.files.arsys)
+  ]);
+
+  // Cargar listado de proveedores de transporte (opcional) para excluir sus NITs
+  if (state.files.transp) {
+    try {
+      const wbT = await readExcel(state.files.transp);
+      etlTransporte(wbT).forEach(n => NITS_TRANSPORTE.add(n));
+    } catch(e) {}
+  }
+
+  setProgress(30,'ETL — DIAN...'); await delay(60);
+  const dian = etlDIAN(wbD);
+  state._dian = dian;
+  setProgress(50,'ETL — HKA...'); await delay(60);
+  const hka = etlHKA(wbH);
+  state._hka = hka;
+  state._notas = hka._notas || [];
+  setProgress(65,'ETL — Arsys...'); await delay(60);
+  const arsys = etlARSYS(wbA);
+  state._arsys = arsys;
+  state._noMapeados = arsys._noMapeados || {};
+  // Datasets completos (contabilidad general, todos los proveedores)
+  const hkaFact = hka.map(r => ({...r, _tipo:'Factura'}));
+  const hkaNotas = state._notas.map(r => ({...r, _tipo:'Nota'}));
+  state._hkaTotal = [...hkaFact, ...hkaNotas];
+  state._dianTotal = dian;
+  state._notasHKA = state._notas;
+
+  // Detalle de ORF S.A. BIC (excluido del universo, pero con reporte propio):
+  // cada documento que ORF nos emitió, con su estado en HKA y en Arsys.
+  const hkaKeys = new Set(hka.map(r=>r.LLAVE));
+  (hka._notas||[]).forEach(nt=>hkaKeys.add(nt.LLAVE));
+  const arsysKeys = new Set(arsys.map(r=>r.LLAVE));
+  state._orf = (dian._orf||[]).map(r => ({
+    ...r,
+    _enHKA: hkaKeys.has(r.LLAVE),
+    _enArsys: arsysKeys.has(r.LLAVE)
+  }));
+
+  setProgress(85,'Análisis DIAN vs HKA...'); await delay(60);
+  state.results.cristian = analysisHKA(dian, hka);
+  state.filtered.cristian = [...state.results.cristian];
+
+  setProgress(95,'Análisis DIAN vs Arsys...'); await delay(60);
+  state.results.luna = analysisArsys(dian, arsys, state._notas);
+  state.filtered.luna = [...state.results.luna];
+
+  setProgress(100,'Listo.'); await delay(300);
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('panel-upload').style.display = 'none';
+
+  renderStats('cristian');
+  renderTable('cristian');
+
+  computeCruce();
+  const setTxt = (id,v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const pC = state.results.cristian.filter(r=>r['Estado Conciliacion']==='PENDIENTE EN HKA').length;
+  setTxt('cnt-cristian', pC);
+  setTxt('cnt-totalhka', (state._hkaTotal||[]).length);
+  setTxt('cnt-totaldian', (state._dianTotal||[]).length);
+  setTxt('cnt-cruce', state._cruce.filter(r=>r._cat==='NO EN HKA NI EN ARSYS').length);
+  setTxt('cnt-orf', (state._orf||[]).length);
+  document.getElementById('btn-export').disabled = false;
+  document.getElementById('btn-diag').disabled = false;
+  document.getElementById('btn-pdf').disabled = false;
+
+  // Aviso de tipos no mapeados similares (punto 3 del requerimiento)
+  avisarNoMapeados();
+  showAnalysisReady();
+}
+
+function avisarNoMapeados() {
+  const nm = state._noMapeados || {};
+  const codes = Object.keys(nm);
+  if (!codes.length) return;
+  const lista = codes.map(c => `${c} (${nm[c]})`).join(', ');
+  const banner = document.getElementById('aviso-nomapeados');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.innerHTML = `⚠️ <strong>Tipos de documento no mapeados detectados:</strong> ${lista}. ` +
+      `Son similares a tipos válidos pero no están en la lista configurada. Revisa si deberían incluirse.`;
+  }
+}
+
+function showAnalysisReady() {
+  // Tras ejecutar, mostrar el total de documentos DIAN
+  document.getElementById('panel-upload').style.display = 'none';
+  switchPanel('totaldian');
+}
+
+function setProgress(pct,label) {
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('progress-label').textContent = label;
+}
+
+// ── STATS ──
+
+function renderStats(panel) {
+  const data = state.results[panel];
+  const pKey = panel==='cristian'?'PENDIENTE EN HKA':'PENDIENTE EN ARSYS';
+  const totalDian = (state._dian || []).length;
+  const conciliados = data.filter(r=>r['Estado Conciliacion'].startsWith('OK')).length;
+  const pendBase = data.filter(r=>r['Estado Conciliacion']===pKey).length;
+  const pendNota = data.filter(r=>r['Estado Conciliacion']==='PENDIENTE (TIENE NOTA)').length;
+  const pend = pendBase + pendNota;
+  const typos = data.filter(r=>r['Estado Conciliacion']==='POSIBLE ERROR DIGITACIÓN').length;
+  const valPend = data.filter(r=>r['Estado Conciliacion']===pKey || r['Estado Conciliacion']==='PENDIENTE (TIENE NOTA)').reduce((s,r)=>s+parseFloat(r.Total||0),0);
+  const destino = panel==='cristian' ? 'HKA' : 'Arsys';
+  const notaCard = panel==='luna'
+    ? `<div class="stat-card"><div class="stat-label">Con nota de anulación</div><div class="stat-value sv-blue">${pendNota}</div></div>`
+    : '';
+  document.getElementById('stats-'+panel).innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total compras DIAN</div><div class="stat-value sv-blue">${totalDian}</div></div>
+    <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value sv-red">${pend}</div></div>
+    <div class="stat-card"><div class="stat-label">Ya en ${destino}</div><div class="stat-value sv-green">${conciliados}</div></div>
+    ${notaCard}
+    <div class="stat-card"><div class="stat-label">Posible error digit.</div><div class="stat-value sv-amber">${typos}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor pendiente</div><div class="stat-value sv-red" style="font-size:15px">${money(valPend)}</div></div>`;
+}
+
+// ── TABLE ──
+function renderTable(panel) {
+  const data = state.filtered[panel];
+  const tbody = document.getElementById('tbody-'+panel);
+  // Contador explicativo: mostrados + conciliados ocultos
+  const totalDian = (state._dian || []).length;
+  const mostradosTotal = (state.results[panel] || []).length;
+  const conciliados = totalDian - mostradosTotal;
+  const destino = panel==='cristian' ? 'HKA' : 'Arsys';
+  const filtroActivo = data.length !== mostradosTotal;
+  document.getElementById('tbl-count-'+panel).textContent =
+    filtroActivo
+      ? `${data.length} de ${mostradosTotal} sin conciliar (filtrado)`
+      : `${data.length} sin conciliar · ${conciliados} ya en ${destino} (ocultos)`;
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin resultados</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(r => {
+    const est = r['Estado Conciliacion'];
+    const isOK = est.startsWith('OK');
+    const isPend = est.startsWith('PENDIENTE');
+    const isTypo = est === 'POSIBLE ERROR DIGITACIÓN';
+    const isNota = est === 'PENDIENTE (TIENE NOTA)';
+    const bdg = isOK   ? `<span class="badge badge-fact">✓ ${est}</span>`
+              : isNota ? `<span class="badge badge-nota">📝 ${est}</span>`
+              : isPend ? `<span class="badge badge-pendiente"><span class="dot dot-red"></span>${est}</span>`
+              : isTypo ? `<span class="badge badge-typo">⚠ ${est}</span>`
+                       : `<span class="badge badge-solo-dian">${est}</span>`;
+    const refKey = panel === 'cristian' ? 'Referencia HKA' : 'Referencia Arsys';
+    const destino = panel === 'cristian' ? 'HKA' : 'Arsys';
+    const refVal = r[refKey]
+      ? ` <span class="typo-ref" title="En ${destino} está registrada como '${r[refKey]}'. Corregir a '${r.FACTURA}' para que concilie." style="font-family:var(--mono);font-size:10px;color:var(--orange-d);margin-left:4px;cursor:help;">→ ${r[refKey]}</span>`
+      : '';
+    const nom = r['Nombre Emisor'];
+    // Badge de tipo de documento DIAN (Factura / Nota)
+    const tipoDoc = r['Tipo Doc DIAN'] || 'Factura';
+    const tipoDocBdg = tipoDoc === 'Nota'
+      ? `<span class="badge badge-nota">Nota</span>`
+      : `<span class="badge badge-fact">Factura</span>`;
+    // Columna 6 difiere: HKA = Estado DIAN | Arsys = Nota Asociada
+    const col6 = panel === 'luna'
+      ? (r['Nota Asociada']
+          ? `<span class="badge badge-nota" style="font-size:10px;">${r['Nota Asociada']}</span> <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">${r['Valor Nota']?money(r['Valor Nota']):''}</span>`
+          : `<span style="color:var(--text3);">—</span>`)
+      : `${r['Estado DIAN']||''}`;
+    return `<tr>
+      <td class="mono">${r['NIT Emisor']}</td>
+      <td class="bold" title="${nom}">${nom.length>28?nom.slice(0,28)+'…':nom}</td>
+      <td class="mono">${r['FACTURA']}</td>
+      <td>${tipoDocBdg}</td>
+      <td>${r['Forma Pago']==='Crédito' ? '<span class="badge badge-nota">Crédito</span>' : r['Forma Pago']==='Contado' ? '<span class="badge badge-typo">Contado</span>' : (r['Forma Pago']||'—')}</td>
+      <td class="mono">${r['Fecha Emisión']}</td>
+      <td class="amount">${money(r['Total'])}</td>
+      <td>${col6}</td>
+      <td>${bdg}${refVal}</td>
+      <td><button class="verif-btn" title="${VERIF_LBLS[(state.verif||{})[r.LLAVE]||0]} — clic para cambiar" onclick="toggleVerif('${panel}','${r.LLAVE.replace(/'/g,"\\'")}')">${VERIF_ICONS[(state.verif||{})[r.LLAVE]||0]}</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── NOTAS DE MANTENIMIENTO ──
+function renderNotas() {
+  const notas = state._notasHKA || [];
+  // Stats
+  const totalVal = notas.reduce((s,n)=>s+(n.Total||0),0);
+  document.getElementById('stats-notas').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Notas de mantenim.</div><div class="stat-value sv-blue">${notas.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor total notas</div><div class="stat-value sv-amber" style="font-size:15px">${money(totalVal)}</div></div>`;
+  state._notasFiltradas = [...notas];
+  renderNotasTable();
+}
+function renderNotasTable() {
+  const notas = state._notasFiltradas || [];
+  document.getElementById('tbl-count-notas').textContent = notas.length + (notas.length===1?' nota':' notas');
+  const tbody = document.getElementById('tbody-notas');
+  if (!notas.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin notas de proveedores de mantenimiento en este periodo</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = notas.map(n => `<tr>
+    <td class="mono">${n['NIT Emisor']}</td>
+    <td class="bold" title="${n.Proveedor}">${n.Proveedor.length>30?n.Proveedor.slice(0,30)+'…':n.Proveedor}</td>
+    <td class="mono">${n.FACTURA}</td>
+    <td><span class="badge badge-nota">${n['Tipo Doc']||'NOTA'}</span></td>
+    <td class="mono">${n['Factura Referenciada']||'—'}</td>
+    <td class="amount">${money(n.Total)}</td>
+  </tr>`).join('');
+}
+function filterNotas(q) {
+  q = (q||'').toLowerCase();
+  state._notasFiltradas = (state._notasHKA||[]).filter(n =>
+    Object.values(n).some(v => String(v).toLowerCase().includes(q)));
+  renderNotasTable();
+}
+
+// ── TOTAL FACTURAS MANT. HKA ──
+function renderTotalHKA() {
+  const data = state._hkaTotal || [];
+  const fact = data.filter(r => r._tipo==='Factura').length;
+  const notas = data.filter(r => r._tipo==='Nota').length;
+  const totalVal = data.reduce((s,r)=>s+(parseFloat(r.Total)||0),0);
+  document.getElementById('stats-totalhka').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total documentos</div><div class="stat-value sv-blue">${data.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Facturas</div><div class="stat-value sv-green">${fact}</div></div>
+    <div class="stat-card"><div class="stat-label">Notas</div><div class="stat-value sv-blue">${notas}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor total</div><div class="stat-value sv-amber" style="font-size:15px">${money(totalVal)}</div></div>`;
+  state._hkaTotalFilt = [...data];
+  renderTotalHKATable();
+}
+function renderTotalHKATable() {
+  const data = state._hkaTotalFilt || [];
+  document.getElementById('tbl-count-totalhka').textContent = data.length + (data.length===1?' documento':' documentos');
+  const tbody = document.getElementById('tbody-totalhka');
+  if (!data.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin documentos en HKA</div></div></td></tr>`; return; }
+  tbody.innerHTML = data.map(r => {
+    const tipoBdg = r._tipo==='Nota' ? `<span class="badge badge-nota">Nota</span>` : `<span class="badge badge-fact">Factura</span>`;
+    const prov = r.Proveedor || '';
+    return `<tr>
+      <td class="mono">${r['NIT Emisor']}</td>
+      <td class="bold" title="${prov}">${prov.length>30?prov.slice(0,30)+'…':prov}</td>
+      <td class="mono">${r.FACTURA}</td>
+      <td>${tipoBdg}</td>
+      <td class="mono">${r['Factura Referenciada']||'—'}</td>
+      <td>${r['Estatus HKA']||'—'}</td>
+      <td class="amount">${money(r.Total)}</td>
+    </tr>`;
+  }).join('');
+}
+function filterMantHKA(q) {
+  q = (q||'').toLowerCase();
+  state._hkaTotalFilt = (state._hkaTotal||[]).filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+  renderTotalHKATable();
+}
+
+// ── TOTAL FACTURAS MANT. DIAN ──
+function renderTotalDIAN() {
+  const data = state._dianTotal || [];
+  const fact = data.filter(r => r['Tipo Doc DIAN']!=='Nota').length;
+  const notas = data.filter(r => r['Tipo Doc DIAN']==='Nota').length;
+  const totalVal = data.reduce((s,r)=>s+(parseFloat(r.Total)||0),0);
+  document.getElementById('stats-totaldian').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total documentos</div><div class="stat-value sv-blue">${data.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Facturas (crédito)</div><div class="stat-value sv-green">${fact}</div></div>
+    <div class="stat-card"><div class="stat-label">Notas</div><div class="stat-value sv-blue">${notas}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor total</div><div class="stat-value sv-amber" style="font-size:15px">${money(totalVal)}</div></div>`;
+  state._dianTotalFilt = [...data];
+  renderTotalDIANTable();
+}
+function renderTotalDIANTable() {
+  const data = state._dianTotalFilt || [];
+  document.getElementById('tbl-count-totaldian').textContent = data.length + (data.length===1?' documento':' documentos');
+  const tbody = document.getElementById('tbody-totaldian');
+  if (!data.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin documentos en DIAN</div></div></td></tr>`; return; }
+  tbody.innerHTML = data.map(r => {
+    const esNota = r['Tipo Doc DIAN']==='Nota';
+    const tipoBdg = esNota ? `<span class="badge badge-nota">Nota</span>` : `<span class="badge badge-fact">Factura</span>`;
+    const nom = r['Nombre Emisor'] || '';
+    return `<tr>
+      <td class="mono">${r['NIT Emisor']}</td>
+      <td class="bold" title="${nom}">${nom.length>30?nom.slice(0,30)+'…':nom}</td>
+      <td class="mono">${r.FACTURA}</td>
+      <td>${tipoBdg}</td>
+      <td>${r['Forma Pago']||'—'}</td>
+      <td class="mono">${r['Fecha Emisión']}</td>
+      <td class="amount">${money(r.Total)}</td>
+    </tr>`;
+  }).join('');
+}
+function filterMantDIAN(q) {
+  q = (q||'').toLowerCase();
+  state._dianTotalFilt = (state._dianTotal||[]).filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+  renderTotalDIANTable();
+}
+
+// ── FILTER / SORT ──
+function filterTable(panel, q) {
+  q = (q||'').toLowerCase();
+  const sf = document.getElementById('status-'+panel).value;
+  const tf = (state.tercFilter||{})[panel];
+  state.filtered[panel] = state.results[panel].filter(r =>
+    (!q || Object.values(r).some(v => String(v).toLowerCase().includes(q))) &&
+    (!sf || r['Estado Conciliacion']===sf) &&
+    (!tf || !tf.size || tf.has(r['NIT Emisor']))
+  );
+  renderTable(panel);
+}
+
+// ── FILTRO DE TERCEROS (estilo Excel: buscar + checkboxes multiselección) ──
+function toggleTercDrop(panel) {
+  const d = document.getElementById('terc-drop-'+panel);
+  const abierto = d.classList.contains('open');
+  document.querySelectorAll('.terc-drop').forEach(x=>x.classList.remove('open'));
+  if (!abierto) { d.classList.add('open'); renderTercList(panel,''); }
+}
+function tercOptions(panel) {
+  const vistos = {}; 
+  (state.results[panel]||[]).forEach(r => { if(!vistos[r['NIT Emisor']]) vistos[r['NIT Emisor']] = r['Nombre Emisor']||''; });
+  return Object.entries(vistos).map(([n,nom])=>({nit:n,nombre:nom}))
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre));
+}
+function renderTercList(panel, q) {
+  q = (q||'').toLowerCase();
+  const sel = (state.tercFilter||{})[panel] || new Set();
+  const opts = tercOptions(panel).filter(o => !q || o.nombre.toLowerCase().includes(q) || o.nit.includes(q));
+  document.getElementById('terc-list-'+panel).innerHTML = opts.map(o =>
+    `<label class="terc-item"><input type="checkbox" data-nit="${o.nit}" ${sel.has(o.nit)?'checked':''}> <span class="mono" style="font-size:10px;color:var(--text3);">${o.nit}</span> ${o.nombre.slice(0,32)}</label>`
+  ).join('') || '<div style="padding:8px;color:var(--text3);font-size:12px;">Sin coincidencias</div>';
+}
+function tercAll(panel, checked) {
+  document.querySelectorAll('#terc-list-'+panel+' input[type=checkbox]').forEach(c=>c.checked=checked);
+}
+function aplicarTerc(panel) {
+  state.tercFilter = state.tercFilter||{};
+  const set = new Set();
+  document.querySelectorAll('#terc-list-'+panel+' input[type=checkbox]:checked').forEach(c=>set.add(c.dataset.nit));
+  state.tercFilter[panel] = set;
+  document.getElementById('terc-drop-'+panel).classList.remove('open');
+  filterTable(panel, document.getElementById('search-'+panel).value);
+}
+function limpiarTerc(panel) {
+  state.tercFilter = state.tercFilter||{};
+  state.tercFilter[panel] = new Set();
+  document.getElementById('terc-all-'+panel).checked = false;
+  renderTercList(panel,'');
+  filterTable(panel, document.getElementById('search-'+panel).value);
+}
+
+// ── DETALLE ORF ──
+function catORF(r){ return r._enHKA&&r._enArsys?'EN AMBOS':r._enHKA?'SOLO HKA':r._enArsys?'SOLO ARSYS':'EN NINGUNO'; }
+function renderORF(){
+  const d = state._orf||[];
+  const cnt = c => d.filter(r=>catORF(r)===c).length;
+  const val = d.reduce((s,r)=>s+(Number(r.Total)||0),0);
+  document.getElementById('stats-orf').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Documentos ORF</div><div class="stat-value sv-blue">${d.length}</div></div>
+    <div class="stat-card"><div class="stat-label">En HKA y Arsys</div><div class="stat-value sv-green">${cnt('EN AMBOS')}</div></div>
+    <div class="stat-card"><div class="stat-label">En ninguno</div><div class="stat-value sv-red">${cnt('EN NINGUNO')}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor total</div><div class="stat-value sv-amber" style="font-size:15px">${money(val)}</div></div>`;
+  filterORF();
+}
+function filterORF(){
+  const q = (document.getElementById('search-orf').value||'').toLowerCase();
+  const sf = document.getElementById('status-orf').value;
+  const data = (state._orf||[]).filter(r =>
+    (!q || Object.values(r).some(v=>String(v).toLowerCase().includes(q))) &&
+    (!sf || catORF(r)===sf));
+  document.getElementById('tbl-count-orf').textContent = data.length+' documentos';
+  const tb = document.getElementById('tbody-orf');
+  if(!data.length){ tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin documentos</div></div></td></tr>`; return; }
+  const chk = b => b?'<span style="color:var(--green-d);font-weight:700;">✓</span>':'<span style="color:var(--red-d);font-weight:700;">✗</span>';
+  tb.innerHTML = data.map(r=>{
+    const td = r['Tipo Doc DIAN']==='Nota'?'<span class="badge badge-nota">Nota</span>':'<span class="badge badge-fact">Factura</span>';
+    const fp = r['Forma Pago']==='Crédito'?'<span class="badge badge-nota">Crédito</span>':r['Forma Pago']==='Contado'?'<span class="badge badge-typo">Contado</span>':(r['Forma Pago']||'—');
+    return `<tr>
+      <td class="mono">${r.FACTURA}</td><td>${td}</td><td>${fp}</td>
+      <td class="mono">${r['Fecha Emisión']}</td><td class="amount">${money(r.Total)}</td>
+      <td style="text-align:center;">${chk(r._enHKA)}</td>
+      <td style="text-align:center;">${chk(r._enArsys)}</td>
+      <td class="mono" style="font-size:9px;" title="${r['CUFE']}">${(r['CUFE']||'').slice(0,16)}…</td>
+      <td>${r['CUFE']?`<button class="verif-btn" title="Validar en DIAN" onclick="validarDIAN('${r['CUFE']}')">🔎 DIAN</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CRUCE COMPLETO DIAN→HKA→ARSYS ──
+function computeCruce() {
+  const okH = new Set((state.results.cristian||[]).filter(r=>r['Estado Conciliacion']==='OK HKA').map(r=>r.LLAVE));
+  const okA = new Set((state.results.luna||[]).filter(r=>r['Estado Conciliacion']==='OK ARSYS').map(r=>r.LLAVE));
+  state._cruce = (state._dian||[]).map(r => {
+    const h = okH.has(r.LLAVE), a = okA.has(r.LLAVE);
+    const cat = h&&a ? 'EN HKA Y EN ARSYS' : h&&!a ? 'EN HKA, NO EN ARSYS' : !h&&a ? 'NO EN HKA, SÍ EN ARSYS' : 'NO EN HKA NI EN ARSYS';
+    return {...r, _enHKA:h, _enArsys:a, _cat:cat};
+  });
+}
+function renderCruce() {
+  if (!state._cruce) computeCruce();
+  const d = state._cruce||[];
+  const c = cat => d.filter(r=>r._cat===cat).length;
+  document.getElementById('stats-cruce').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total DIAN</div><div class="stat-value sv-blue">${d.length}</div></div>
+    <div class="stat-card"><div class="stat-label">En HKA y Arsys</div><div class="stat-value sv-green">${c('EN HKA Y EN ARSYS')}</div></div>
+    <div class="stat-card"><div class="stat-label">En HKA, no Arsys</div><div class="stat-value sv-amber">${c('EN HKA, NO EN ARSYS')}</div></div>
+    <div class="stat-card"><div class="stat-label">No HKA, sí Arsys</div><div class="stat-value sv-blue">${c('NO EN HKA, SÍ EN ARSYS')}</div></div>
+    <div class="stat-card"><div class="stat-label">Ni HKA ni Arsys</div><div class="stat-value sv-red">${c('NO EN HKA NI EN ARSYS')}</div></div>`;
+  filterCruce();
+}
+function filterCruce() {
+  const q = (document.getElementById('search-cruce').value||'').toLowerCase();
+  const sf = document.getElementById('status-cruce').value;
+  const data = (state._cruce||[]).filter(r =>
+    (!q || Object.values(r).some(v => String(v).toLowerCase().includes(q))) &&
+    (!sf || r._cat===sf));
+  state._cruceFilt = data;
+  document.getElementById('tbl-count-cruce').textContent = data.length + ' documentos';
+  const tb = document.getElementById('tbody-cruce');
+  if (!data.length) { tb.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin documentos</div></div></td></tr>`; return; }
+  const catBdg = c => c==='EN HKA Y EN ARSYS' ? `<span class="badge badge-fact">✓ ${c}</span>`
+    : c==='EN HKA, NO EN ARSYS' ? `<span class="badge badge-typo">${c}</span>`
+    : c==='NO EN HKA, SÍ EN ARSYS' ? `<span class="badge badge-nota">${c}</span>`
+    : `<span class="badge badge-pendiente"><span class="dot dot-red"></span>${c}</span>`;
+  const chk = b => b ? '<span style="color:var(--green-d);font-weight:700;">✓</span>' : '<span style="color:var(--red-d);font-weight:700;">✗</span>';
+  tb.innerHTML = data.map(r => {
+    const nom = r['Nombre Emisor']||'';
+    const td = r['Tipo Doc DIAN']==='Nota' ? `<span class="badge badge-nota">Nota</span>` : `<span class="badge badge-fact">Factura</span>`;
+    return `<tr>
+      <td class="mono">${r['NIT Emisor']}</td>
+      <td class="bold" title="${nom}">${nom.length>26?nom.slice(0,26)+'…':nom}</td>
+      <td class="mono">${r.FACTURA}</td><td>${td}</td>
+      <td>${r['Forma Pago']==='Crédito' ? '<span class="badge badge-nota">Crédito</span>' : r['Forma Pago']==='Contado' ? '<span class="badge badge-typo">Contado</span>' : (r['Forma Pago']||'—')}</td>
+      <td class="mono">${r['Fecha Emisión']}</td>
+      <td class="amount">${money(r.Total)}</td>
+      <td style="text-align:center;">${chk(r._enHKA)}</td>
+      <td style="text-align:center;">${chk(r._enArsys)}</td>
+      <td>${catBdg(r._cat)}</td>
+      <td>${r['CUFE'] ? `<button class="verif-btn" title="Validar en la DIAN (buscar por CUFE)" onclick="validarDIAN('${r['CUFE']}')">🔎 DIAN</button>` : '<span style="color:var(--text3);">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+// Redirige al buscador de documentos electrónicos de la DIAN y copia el CUFE al portapapeles
+function validarDIAN(cufe) {
+  try { navigator.clipboard.writeText(cufe); } catch(e) {}
+  window.open('https://catalogo-vpfe.dian.gov.co/User/SearchDocument', '_blank');
+}
+
+// ── VERIFICACIÓN MANUAL (clic cicla: sin verificar → verificado → pendiente) ──
+const VERIF_ICONS = ['⬜','✅','🟡'];
+const VERIF_LBLS  = ['Sin verificar','Verificado','Pendiente por revisar'];
+function toggleVerif(panel, llave) {
+  state.verif = state.verif||{};
+  state.verif[llave] = ((state.verif[llave]||0)+1) % 3;
+  renderTable(panel);
+}
+function filterByStatus(panel) { filterTable(panel, document.getElementById('search-'+panel).value); }
+function sortTable(panel, col) {
+  const s = state.sort[panel];
+  s.asc = s.col===col ? !s.asc : true; s.col=col;
+  state.filtered[panel].sort((a,b) => {
+    let va=a[col]??'', vb=b[col]??'';
+    if (col==='Total'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return s.asc?va-vb:vb-va;}
+    va=String(va).toLowerCase();vb=String(vb).toLowerCase();
+    return s.asc?va.localeCompare(vb):vb.localeCompare(va);
+  });
+  renderTable(panel);
+}
+
+// ── PANEL SWITCH ──
+// ════════════════════════════════════════════════════
+// CONTROL DE ACCESO POR PANEL
+// Para agregar un nuevo análisis con clave, añade una línea aquí:
+//   nuevoPanel: 'ClaveDelAnalista'
+// Un panel SIN entrada en este objeto queda libre (sin clave).
+// ════════════════════════════════════════════════════
+const PANEL_KEYS = {}; // Contabilidad general: sin claves por usuario
+// Paneles ya desbloqueados en esta sesión (se reinicia al recargar la página)
+const unlockedPanels = new Set();
+
+function checkPanelAccess(panel) {
+  // El panel de notas es parte del análisis de Luna → usa su misma llave/desbloqueo
+  if (panel === 'notas') {
+    if (unlockedPanels.has('luna')) return true;
+    const intento = prompt('🔒 Acceso restringido — Notas de mantenimiento (Luna Sofía)\n\nIngrese la clave:');
+    if (intento === null) return false;
+    if (intento === PANEL_KEYS['luna']) { unlockedPanels.add('luna'); return true; }
+    alert('❌ Clave incorrecta. Acceso denegado.');
+    return false;
+  }
+  // Sin clave configurada → acceso libre
+  if (!PANEL_KEYS[panel]) return true;
+  // Ya desbloqueado en esta sesión
+  if (unlockedPanels.has(panel)) return true;
+  // Pedir clave
+  const label = panel === 'cristian' ? 'DIAN vs HKA'
+              : panel === 'luna' ? 'DIAN vs Arsys'
+              : panel;
+  const intento = prompt('🔒 Acceso restringido — ' + label + '\n\nIngrese la clave:');
+  if (intento === null) return false; // canceló
+  if (intento === PANEL_KEYS[panel]) {
+    unlockedPanels.add(panel);
+    return true;
+  }
+  alert('❌ Clave incorrecta. Acceso denegado.');
+  return false;
+}
+
+function switchPanel(panel) {
+  // Verificar acceso antes de cambiar de panel
+  if (!checkPanelAccess(panel)) return;
+  if (panel==='luna') panel='cruce';
+  state.currentPanel = panel;
+  const ready = document.getElementById('panel-ready');
+  if (ready) ready.style.display = 'none';
+  const pNotas = document.getElementById('panel-notas');
+  if (pNotas) pNotas.style.display = (panel==='notas') ? 'block' : 'none';
+  const pCruce = document.getElementById('panel-cruce');
+  if (pCruce) pCruce.style.display = (panel==='cruce') ? 'block' : 'none';
+  const pORF = document.getElementById('panel-orf');
+  if (pORF) pORF.style.display = (panel==='orf') ? 'block' : 'none';
+  const pTHka = document.getElementById('panel-totalhka');
+  if (pTHka) pTHka.style.display = (panel==='totalhka') ? 'block' : 'none';
+  const pTDian = document.getElementById('panel-totaldian');
+  if (pTDian) pTDian.style.display = (panel==='totaldian') ? 'block' : 'none';
+  ['upload','cristian','luna'].forEach(p => {
+    const el = document.getElementById('panel-'+p);
+    if(el){ el.style.display = p===panel?'block':'none'; el.classList.toggle('active',p===panel); }
+  });
+  ['cristian','luna','totalhka','totaldian','cruce','orf'].forEach(p => document.getElementById('nav-'+p)?.classList.toggle('active',p===panel));
+  if (panel==='notas') renderNotas();
+  if (panel==='cruce') renderCruce();
+  if (panel==='orf') renderORF();
+  if (panel==='totalhka') renderTotalHKA();
+  if (panel==='totaldian') renderTotalDIAN();
+  const cfg = {
+    upload: ['Conciliación de Compras','Cargue los 4 archivos y ejecute el análisis',''],
+    cristian: ['DIAN vs HKA — Sin facturar electrónicamente','Documentos en DIAN que no están en HKA','cristian'],
+    luna: ['DIAN vs Arsys — Sin contabilizar','Documentos en DIAN sin contabilizar en Arsys','luna'],
+    orf: ['Detalle ORF S.A. BIC','Documentos que ORF nos emitió y su estado en HKA y Arsys','orf'],
+    cruce: ['Cruce completo','Cada documento de la DIAN, revisado contra HKA y contra Arsys','cruce'],
+    notas: ['Notas de anulación','Notas crédito/débito y la factura que afectan','notas'],
+    totalhka: ['Total Documentos HKA','Todas las facturas y notas recibidas en HKA','totalhka'],
+    totaldian: ['Total Documentos DIAN','Facturas y notas electrónicas recibidas en DIAN','totaldian']
+  };
+  document.getElementById('topbar-title').textContent = cfg[panel][0];
+  document.getElementById('topbar-sub').textContent = cfg[panel][1];
+  const bEl = document.getElementById('topbar-badges');
+  if ((panel==='cristian'||panel==='luna') && state.results[panel]) {
+    const pKey = panel==='cristian'?'PENDIENTE EN HKA':'PENDIENTE EN ARSYS';
+    const pend = state.results[panel].filter(r=>r['Estado Conciliacion']===pKey).length;
+    bEl.innerHTML = `<span class="topbar-badge ${pend>0?'tb-amber':'tb-green'}">${pend} pendiente${pend!==1?'s':''}</span>`;
+  } else { bEl.innerHTML=''; }
+}
+
+// Init
+document.getElementById('panel-upload').style.display='block';
+document.getElementById('panel-cristian').style.display='none';
+document.getElementById('panel-luna').style.display='none';
+
+
+// ── DIAGNÓSTICO ──
+function runDiagnostic() {
+  const factura = prompt('Escribe la FACTURA a diagnosticar (ej: FVE184):', 'FVE184');
+  if (!factura) return;
+  const f = factura.trim().toUpperCase();
+
+  const dianMatch = (state._dian||[]).filter(r => r.FACTURA.toUpperCase() === f);
+  const hkaMatch = (state._hka||[]).filter(r => r.FACTURA.toUpperCase() === f);
+  const arsysMatch = (state._arsys||[]).filter(r => r.FACTURA.toUpperCase() === f);
+
+  let msg = '════ DIAGNÓSTICO: ' + f + ' ════\n\n';
+
+  msg += '── EN DIAN (' + dianMatch.length + ') ──\n';
+  dianMatch.forEach(r => {
+    msg += 'FACTURA: "' + r.FACTURA + '"\n';
+    msg += 'NIT: "' + r['NIT Emisor'] + '"\n';
+    msg += 'LLAVE: "' + r.LLAVE + '"\n';
+  });
+
+  msg += '\n── EN HKA (' + hkaMatch.length + ') ──\n';
+  if (hkaMatch.length === 0) msg += '(no encontrada con ese número exacto)\n';
+  hkaMatch.forEach(r => {
+    msg += 'FACTURA: "' + r.FACTURA + '"\n';
+    msg += 'NIT: "' + r['NIT Emisor'] + '"\n';
+    msg += 'LLAVE: "' + r.LLAVE + '"\n';
+  });
+
+  msg += '\n── EN ARSYS (' + arsysMatch.length + ') ──\n';
+  if (arsysMatch.length === 0) msg += '(no encontrada con ese número exacto)\n';
+  arsysMatch.forEach(r => {
+    msg += 'FACTURA: "' + r.FACTURA + '"\n';
+    msg += 'NIT: "' + r['NIT Emisor'] + '"\n';
+    msg += 'LLAVE: "' + r.LLAVE + '"\n';
+  });
+
+  // Comparación de llaves
+  if (dianMatch.length && hkaMatch.length) {
+    const ld = dianMatch[0].LLAVE, lh = hkaMatch[0].LLAVE;
+    msg += '\n── COMPARACIÓN DIAN vs HKA ──\n';
+    msg += '¿Llaves idénticas?: ' + (ld === lh ? 'SÍ ✓' : 'NO ✗') + '\n';
+    if (ld !== lh) {
+      msg += 'DIAN: [' + ld + '] (' + ld.length + ' chars)\n';
+      msg += 'HKA:  [' + lh + '] (' + lh.length + ' chars)\n';
+      // Mostrar códigos de caracteres que difieren
+      const maxLen = Math.max(ld.length, lh.length);
+      let diffs = [];
+      for (let i = 0; i < maxLen; i++) {
+        if (ld[i] !== lh[i]) {
+          diffs.push('pos ' + i + ': DIAN=' + (ld[i]?('"'+ld[i]+'"(cod '+ld.charCodeAt(i)+')'):'∅') + ' vs HKA=' + (lh[i]?('"'+lh[i]+'"(cod '+lh.charCodeAt(i)+')'):'∅'));
+        }
+      }
+      msg += 'Diferencias:\n' + diffs.join('\n');
+    }
+  }
+
+  alert(msg);
+  console.log(msg);
+}
+
+// ── EXPORT ──
+
+// ═══════════ EXPORTABLES INSTITUCIONALES ═══════════
+const VERDE_OSCURO = 'FF1B5E20';
+const VERDE_CLARO  = 'FFE8F5E9';
+
+function periodoAnalizado() {
+  const f = (state._dian||[]).map(r=>r['Fecha Emisión']).filter(Boolean).sort();
+  if (!f.length) return '';
+  return f[0] === f[f.length-1] ? f[0] : `${f[0]} al ${f[f.length-1]}`;
+}
+const VERIF_TXT = ['Sin verificar','Verificado','Pendiente por revisar'];
+function verifDe(r) { return VERIF_TXT[(state.verif||{})[r.LLAVE]||0]; }
+
+// Definición de cada reporte según el panel donde esté el usuario
+function datasetDePanel(panel) {
+  const D = {
+    cristian: {
+      titulo:'REVISIÓN DE FACTURACIÓN DIAN VS HKA',
+      hoja:'DIAN vs HKA',
+      filas: state.filtered.cristian || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'NOMBRE EMISOR',w:42,f:r=>r['Nombre Emisor']},
+        {h:'FACTURA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO DOC',w:11,f:r=>r['Tipo Doc DIAN']},
+        {h:'FORMA PAGO',w:13,f:r=>r['Forma Pago']||''},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'ESTADO DIAN',w:26,f:r=>r['Estado DIAN']},
+        {h:'ESTADO CONCILIACIÓN',w:26,f:r=>r['Estado Conciliacion']},
+        {h:'REFERENCIA HKA',w:18,f:r=>r['Referencia HKA']||''},
+        {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''},
+        {h:'VERIFICACIÓN',w:20,f:verifDe}
+      ]},
+    luna: {
+      titulo:'REVISIÓN DE FACTURACIÓN DIAN VS ARSYS (CONTABILIZACIÓN)',
+      hoja:'DIAN vs Arsys',
+      filas: state.filtered.luna || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'NOMBRE EMISOR',w:42,f:r=>r['Nombre Emisor']},
+        {h:'FACTURA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO DOC',w:11,f:r=>r['Tipo Doc DIAN']},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'NOTA ASOCIADA',w:20,f:r=>r['Nota Asociada']||''},
+        {h:'VALOR NOTA',w:16,f:r=>Number(r['Valor Nota'])||0,n:true},
+        {h:'ESTADO CONCILIACIÓN',w:26,f:r=>r['Estado Conciliacion']},
+        {h:'REFERENCIA ARSYS',w:18,f:r=>r['Referencia Arsys']||''},
+        {h:'VERIFICACIÓN',w:20,f:verifDe}
+      ]},
+    cruce: {
+      titulo:'CRUCE COMPLETO DIAN → HKA → ARSYS',
+      hoja:'Cruce completo',
+      filas: state._cruceFilt || state._cruce || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'NOMBRE EMISOR',w:42,f:r=>r['Nombre Emisor']},
+        {h:'FACTURA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO DOC',w:11,f:r=>r['Tipo Doc DIAN']},
+        {h:'FORMA PAGO',w:13,f:r=>r['Forma Pago']||''},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'¿EN HKA?',w:12,f:r=>r._enHKA?'SÍ':'NO'},
+        {h:'¿EN ARSYS?',w:12,f:r=>r._enArsys?'SÍ':'NO'},
+        {h:'SITUACIÓN',w:28,f:r=>r._cat},
+        {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''}
+      ]},
+    totalhka: {
+      titulo:'TOTAL DOCUMENTOS RECIBIDOS EN HKA',
+      hoja:'Documentos HKA',
+      filas: state._hkaTotalFilt || state._hkaTotal || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'PROVEEDOR',w:42,f:r=>r.Proveedor||''},
+        {h:'DOCUMENTO',w:18,f:r=>r.FACTURA},
+        {h:'TIPO',w:11,f:r=>r._tipo||''},
+        {h:'FACTURA REFERENCIADA',w:22,f:r=>r['Factura Referenciada']||''},
+        {h:'ESTATUS HKA',w:26,f:r=>r['Estatus HKA']||''},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true}
+      ]},
+    totaldian: {
+      titulo:'TOTAL DOCUMENTOS RECIBIDOS EN LA DIAN',
+      hoja:'Documentos DIAN',
+      filas: state._dianTotalFilt || state._dianTotal || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'NOMBRE EMISOR',w:42,f:r=>r['Nombre Emisor']},
+        {h:'FACTURA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO DOC',w:11,f:r=>r['Tipo Doc DIAN']},
+        {h:'FORMA PAGO',w:14,f:r=>r['Forma Pago']||''},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''}
+      ]},
+    orf: {
+      titulo:'DETALLE ORF S.A. BIC (NIT 891100445)',
+      hoja:'Detalle ORF',
+      filas: (function(){ const q=(document.getElementById('search-orf')||{}).value||''; const sf=(document.getElementById('status-orf')||{}).value||''; return (state._orf||[]).filter(r=>(!q||Object.values(r).some(v=>String(v).toLowerCase().includes(q.toLowerCase())))&&(!sf||catORF(r)===sf)); })(),
+      cols:[
+        {h:'FACTURA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO DOC',w:11,f:r=>r['Tipo Doc DIAN']},
+        {h:'FORMA PAGO',w:13,f:r=>r['Forma Pago']||''},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'¿EN HKA?',w:12,f:r=>r._enHKA?'SÍ':'NO'},
+        {h:'¿EN ARSYS?',w:12,f:r=>r._enArsys?'SÍ':'NO'},
+        {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''}
+      ]},
+    notas: {
+      titulo:'NOTAS CRÉDITO Y DÉBITO DE PROVEEDORES',
+      hoja:'Notas',
+      filas: state._notasFiltradas || state._notasHKA || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'PROVEEDOR',w:42,f:r=>r.Proveedor||''},
+        {h:'Nº NOTA',w:18,f:r=>r.FACTURA},
+        {h:'TIPO',w:22,f:r=>r['Tipo Doc']||''},
+        {h:'FACTURA QUE AFECTA',w:22,f:r=>r['Factura Referenciada']||''},
+        {h:'VALOR',w:16,f:r=>Number(r.Total)||0,n:true}
+      ]}
+  };
+  return D[panel] || null;
+}
+
+async function exportCurrent() {
+  const panel = state.currentPanel;
+  const ds = datasetDePanel(panel);
+  if (!ds) { alert('Este panel no tiene reporte exportable. Abra un análisis, el cruce completo o un total de documentos.'); return; }
+  if (!ds.filas.length) { alert('No hay documentos para exportar con los filtros actuales.'); return; }
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Transportes del Huila S.A.';
+  wb.created = new Date();
+  const ws = wb.addWorksheet(ds.hoja, {views:[{state:'frozen', ySplit:4}]});
+  const nCols = ds.cols.length;
+
+  // Encabezado institucional: logo + título
+  const imgId = wb.addImage({ base64:'data:image/png;base64,'+LOGO_B64, extension:'png' });
+  ws.addImage(imgId, { tl:{col:0.2,row:0.2}, ext:{width:150,height:46} });
+  ws.mergeCells(1,1,3,nCols);
+  const t = ws.getCell(1,1);
+  const per = periodoAnalizado();
+  t.value = `${ds.titulo} — TRANSPORTES DEL HUILA S.A.${per?'  |  PERIODO: '+per:''}`;
+  t.font = {bold:true, size:12, name:'Calibri'};
+  t.alignment = {vertical:'middle', horizontal:'center'};
+  ws.getRow(1).height = 20; ws.getRow(2).height = 20; ws.getRow(3).height = 16;
+
+  // Fila de encabezados de columna (verde oscuro / letra blanca)
+  const hr = ws.getRow(4);
+  ds.cols.forEach((c,i) => {
+    const cell = hr.getCell(i+1);
+    cell.value = c.h;
+    cell.font = {bold:true, color:{argb:'FFFFFFFF'}, size:10, name:'Calibri'};
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:VERDE_OSCURO}};
+    cell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
+    cell.border = {top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
+    ws.getColumn(i+1).width = c.w;
+  });
+  hr.height = 26;
+
+  // Datos
+  ds.filas.forEach((r, idx) => {
+    const row = ws.addRow(ds.cols.map(c => c.f(r)));
+    row.eachCell((cell, ci) => {
+      const c = ds.cols[ci-1];
+      cell.font = {size:10, name:'Calibri'};
+      cell.border = {top:{style:'hair'},left:{style:'hair'},bottom:{style:'hair'},right:{style:'hair'}};
+      if (c && c.n) { cell.numFmt = '#,##0'; cell.alignment = {horizontal:'right'}; }
+      if (idx % 2 === 1) cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:VERDE_CLARO}};
+    });
+  });
+
+  ws.autoFilter = {from:{row:4,column:1}, to:{row:4,column:nCols}};
+
+  // Pie: trazabilidad
+  const pie = ws.addRow([]);
+  ws.mergeCells(pie.number+1, 1, pie.number+1, nCols);
+  const pc = ws.getCell(pie.number+1, 1);
+  pc.value = `Documentos incluidos: ${ds.filas.length}  |  Generado: ${new Date().toLocaleString('es-CO')}  |  Herramienta de conciliación TDH S.A.`;
+  pc.font = {italic:true, size:9, color:{argb:'FF666666'}};
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `TDH_${ds.hoja.replace(/[^A-Za-z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ═══════════ CERTIFICADO PDF (papel de trabajo) ═══════════
+function exportPDF() {
+  if (!state._dian || !state._dian.length) { alert('Ejecute primero el análisis.'); return; }
+  if (!state._cruce) computeCruce();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt', format:'a4'});
+  const W = doc.internal.pageSize.getWidth();
+  const M = 48; let y = 40;
+
+  doc.addImage('data:image/png;base64,'+LOGO_B64, 'PNG', M, y, 132, 40);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('CERTIFICACIÓN DE CONCILIACIÓN', W-M, y+16, {align:'right'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('TRANSPORTES DEL HUILA S.A.', W-M, y+32, {align:'right'});
+  y += 58;
+  doc.setDrawColor(27,94,32); doc.setLineWidth(2); doc.line(M,y,W-M,y); y += 22;
+
+  const per = periodoAnalizado();
+  doc.setFontSize(10);
+  doc.text(`Periodo analizado: ${per||'—'}`, M, y); y += 14;
+  doc.text(`Fecha y hora de generación: ${new Date().toLocaleString('es-CO')}`, M, y); y += 22;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('1. Objeto y alcance', M, y); y += 15;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+  const alcance = doc.splitTextToSize(
+    'Se verificó la totalidad de los documentos electrónicos recibidos reportados por la DIAN en el periodo, '+
+    'contrastándolos contra el reporte de recepción electrónica (HKA) y contra el movimiento contable del sistema Arsys. '+
+    'El cruce se realiza por tercero (NIT) y número de documento (prefijo + consecutivo), incluyendo notas crédito y débito '+
+    'y su factura referenciada. En Arsys se consideran únicamente las clases de documento de causación de compra definidas por la Compañía.', W-2*M);
+  doc.text(alcance, M, y); y += alcance.length*11 + 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('2. Depuraciones aplicadas', M, y); y += 15;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+  const dep = doc.splitTextToSize(
+    'Se excluyeron del universo los documentos de: peajes electrónicos (se causan por consolidado), pólizas, '+
+    `proveedores de transporte de terceros (${NITS_TRANSPORTE.size} terceros, cuyo gasto no es asumido por la Compañía) y `+
+    `clientes (${NITS_CLIENTES.size} terceros que facturan faltantes a nombre de la Compañía, lo cual no constituye una venta).`, W-2*M);
+  doc.text(dep, M, y); y += dep.length*11 + 12;
+
+  // Resumen
+  const c = cat => state._cruce.filter(r=>r._cat===cat).length;
+  const tot = state._cruce.length;
+  const typH = (state.results.cristian||[]).filter(r=>r['Estado Conciliacion']==='POSIBLE ERROR DIGITACIÓN').length;
+  const typA = (state.results.luna||[]).filter(r=>r['Estado Conciliacion']==='POSIBLE ERROR DIGITACIÓN').length;
+  const notas = (state._notasHKA||[]).length;
+  const filas = [
+    ['Documentos DIAN analizados', tot, ''],
+    ['En HKA y en Arsys (ciclo completo)', c('EN HKA Y EN ARSYS'), pct(c('EN HKA Y EN ARSYS'),tot)],
+    ['En HKA, no en Arsys (por causar)', c('EN HKA, NO EN ARSYS'), pct(c('EN HKA, NO EN ARSYS'),tot)],
+    ['No en HKA, sí en Arsys (revisar flujo)', c('NO EN HKA, SÍ EN ARSYS'), pct(c('NO EN HKA, SÍ EN ARSYS'),tot)],
+    ['No en HKA ni en Arsys (crítico)', c('NO EN HKA NI EN ARSYS'), pct(c('NO EN HKA NI EN ARSYS'),tot)],
+    ['Posibles errores de digitación (HKA / Arsys)', typH+' / '+typA, ''],
+    ['Notas crédito y débito identificadas', notas, '']
+  ];
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('3. Resultado de la conciliación', M, y); y += 16;
+
+  const cw = [W-2*M-150, 75, 75];
+  doc.setFillColor(27,94,32); doc.rect(M, y-11, W-2*M, 18, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(9.5);
+  doc.text('CONCEPTO', M+6, y+1);
+  doc.text('DOCS.', M+cw[0]+40, y+1, {align:'right'});
+  doc.text('%', M+cw[0]+cw[1]+50, y+1, {align:'right'});
+  doc.setTextColor(0,0,0); y += 18;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+  filas.forEach((f,i) => {
+    if (i%2===1) { doc.setFillColor(232,245,233); doc.rect(M, y-10, W-2*M, 16, 'F'); }
+    doc.text(String(f[0]), M+6, y+1);
+    doc.text(String(f[1]), M+cw[0]+40, y+1, {align:'right'});
+    doc.text(String(f[2]), M+cw[0]+cw[1]+50, y+1, {align:'right'});
+    y += 16;
+  });
+  y += 16;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('4. Conclusión', M, y); y += 15;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+  const crit = c('NO EN HKA NI EN ARSYS');
+  const concl = doc.splitTextToSize(
+    crit === 0
+      ? 'De acuerdo con el procedimiento aplicado, no se identificaron documentos electrónicos recibidos que estén ausentes simultáneamente del reporte de recepción (HKA) y del registro contable (Arsys) en el periodo analizado.'
+      : `De acuerdo con el procedimiento aplicado, se identificaron ${crit} documento(s) electrónico(s) recibido(s) que no figuran ni en el reporte de recepción (HKA) ni en el registro contable (Arsys), los cuales requieren gestión por parte de las áreas responsables. El detalle se encuentra en el anexo exportable en formato Excel.`, W-2*M);
+  doc.text(concl, M, y); y += concl.length*11 + 40;
+
+  doc.setLineWidth(0.6); doc.setDrawColor(120,120,120);
+  doc.line(M, y, M+200, y);
+  doc.setFontSize(9);
+  doc.text('Elaborado por', M, y+13);
+  doc.line(W-M-200, y, W-M, y);
+  doc.text('Revisado por', W-M-200, y+13);
+
+  doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+  doc.text('Documento generado automáticamente por la herramienta de conciliación DIAN–HKA–Arsys de Transportes del Huila S.A. '+
+           'Constituye papel de trabajo y debe archivarse junto con los anexos exportados.', M, doc.internal.pageSize.getHeight()-34, {maxWidth:W-2*M});
+
+  doc.save(`TDH_Certificacion_Conciliacion_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+function pct(n,t){ return t? ((n*100)/t).toFixed(1)+'%' : '—'; }
+</script>
+</body>
+</html>
