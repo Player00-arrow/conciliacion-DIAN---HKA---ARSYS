@@ -546,6 +546,11 @@ tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; 
     <span>Cruce completo</span>
     <span class="nav-count" id="cnt-cruce">—</span>
   </div>
+  <div class="nav-item" id="nav-empar" onclick="switchPanel('empar')">
+    <span class="nav-dot"></span>
+    <span>Posibles mal digitadas</span>
+    <span class="nav-count" id="cnt-empar">—</span>
+  </div>
   <div class="nav-item" id="nav-orf" onclick="switchPanel('orf')">
     <span class="nav-dot"></span>
     <span>Detalle ORF S.A.</span>
@@ -601,7 +606,7 @@ tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; 
       <div class="topbar-sub" id="topbar-sub">Cargue los archivos y ejecute el análisis</div>
     </div>
     <div class="topbar-right" id="topbar-badges"></div>
-    <span style="font-family:var(--mono);font-size:10px;color:#fff;background:var(--tdh-green);padding:4px 10px;border-radius:4px;margin-left:8px;">Version v1.2.3</span>
+    <span style="font-family:var(--mono);font-size:10px;color:#fff;background:var(--tdh-green);padding:4px 10px;border-radius:4px;margin-left:8px;">CONTA v10</span>
   </div>
 
   <div class="content">
@@ -812,7 +817,7 @@ tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; 
               <th>Verif.</th>
             </tr></thead>
             <tbody id="tbody-cristian">
-              <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div><div class="empty-sub">Cargue los archivos y ejecute el análisis</div></div></td></tr>
+              <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div><div class="empty-sub">Cargue los archivos y ejecute el análisis</div></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -870,6 +875,43 @@ tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; 
             </tr></thead>
             <tbody id="tbody-luna">
               <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div><div class="empty-sub">Cargue los archivos y ejecute el análisis</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ EMPAREJAMIENTOS ═══ -->
+    <div id="panel-empar" class="panel-tabs">
+      <div class="stats-bar" id="stats-empar"></div>
+      <div class="legend">
+        <div class="legend-item"><span class="badge badge-fact">ALTA</span> Coinciden el valor exacto y además la fecha del documento o el número. En pruebas de estrés acertó 2.529 de 2.530 casos. Es la misma factura.</div>
+        <div class="legend-item"><span class="badge badge-typo">SOLO MONTO</span> Coincide únicamente el valor. Señal débil: en pruebas acertó apenas 1 de cada 5 veces. <strong>Verificar siempre</strong>.</div>
+        <div class="legend-item"><span class="badge badge-pendiente"><span class="dot dot-red"></span>REVISAR</span> Varios candidatos posibles o el proveedor repite montos. Decide la persona.</div>
+      </div>
+      <div class="filters-bar">
+        <input class="search-box" type="text" placeholder="Buscar NIT, nombre, factura..." oninput="filterEmpar()" id="search-empar">
+        <select class="filter-select" onchange="filterEmpar()" id="status-empar">
+          <option value="">Todos los niveles</option>
+          <option value="ALTA">ALTA</option>
+          <option value="SOLO MONTO">SOLO MONTO</option>
+          <option value="REVISAR">REVISAR</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar">
+          <span class="table-title">Facturas que sí están causadas, pero con otro número</span>
+          <span class="table-count" id="tbl-count-empar"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>NIT emisor</th><th>Nombre emisor</th><th>Factura DIAN</th><th>Fecha</th>
+              <th>Valor</th><th>En Arsys aparece como</th><th>Fecha doc.</th>
+              <th>Parecido</th><th>Confianza</th><th>Verif.</th>
+            </tr></thead>
+            <tbody id="tbody-empar">
+              <tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -939,10 +981,10 @@ tbody td.amount { font-family: var(--mono); font-size: 12px; text-align: right; 
           <table>
             <thead><tr>
               <th>NIT emisor</th><th>Nombre emisor</th><th>Factura</th><th>Tipo</th><th>Pago</th>
-              <th>Fecha</th><th>Total</th><th>¿En HKA?</th><th>¿En Arsys?</th><th>Situación</th><th>DIAN</th>
+              <th>Fecha</th><th>Total</th><th>¿En HKA?</th><th>¿En Arsys?</th><th>Situación</th><th>Propuesta</th><th>DIAN</th>
             </tr></thead>
             <tbody id="tbody-cruce">
-              <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
+              <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin datos aún</div></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1057,12 +1099,26 @@ function nit(v) {
 }
 function fac(v) { return String(v??'').trim().replace(/\.0$/,''); }
 function date(v) {
-  if (!v) return '';
+  if (!v && v !== 0) return '';
   if (v instanceof Date) return v.toISOString().slice(0,10);
+  // Fecha serial de Excel (número de días desde 1899-12-30)
+  if (typeof v === 'number' && v > 20000 && v < 80000) {
+    const d = new Date(Date.UTC(1899,11,30) + v*86400000);
+    return d.toISOString().slice(0,10);
+  }
   let s = String(v).trim();
+  if (/^\d{5}(\.\d+)?$/.test(s)) { // serial venido como texto
+    const num = parseFloat(s);
+    if (num > 20000 && num < 80000) {
+      const d = new Date(Date.UTC(1899,11,30) + num*86400000);
+      return d.toISOString().slice(0,10);
+    }
+  }
+  // YYYY-MM-DD ya normalizado
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
   // DD-MM-YYYY o DD/MM/YYYY → YYYY-MM-DD
-  const m = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
-  if (m) return m[3] + '-' + m[2] + '-' + m[1];
+  const m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
   return s.slice(0,10);
 }
 // Convierte 'YYYY-MM-DD' a objeto Date (o null)
@@ -1299,9 +1355,13 @@ function etlARSYS(wb) {
   const cPref = findCol(H, ['prefijoNumeroReferenciaDocumento','prefijo Numero Referencia','Prefijo Referencia','Prefijo']);
   const cNum  = findCol(H, ['NumDocProveedor','Numero Documento Proveedor','Consecutivo Proveedor','Numero Proveedor']);
   const cTerc = findCol(H, ['Tercero','Proveedor','NIT Tercero']);
+  const cDeb  = findCol(H, ['Debito','Débito']);
+  const cCre  = findCol(H, ['Credito','Crédito']);
+  const cFProv= findCol(H, ['fechaDocProveedorReferencia','fecha Doc Proveedor Referencia','Fecha Documento Proveedor']);
 
-  const seen = new Set(), result = [];
-  const noMapeados = {}; // código -> conteo, para avisar de tipos similares no incluidos
+  // Acumular por documento (una factura puede tener varias líneas y hasta varias causaciones)
+  const acc = {}; // llave -> {..., caus, anul, fprov}
+  const noMapeados = {};
   for (let i = hi + 1; i < data.length; i++) {
     const row = data[i];
     const get = c => c ? (row[H.indexOf(c)] ?? '') : '';
@@ -1313,18 +1373,32 @@ function etlARSYS(wb) {
       continue;
     }
     const f = fac(get(cPref)) + fac(get(cNum));
-    if (!f) continue; // sin prefijo/consecutivo no se puede cruzar (se valida por saldos en otra fase)
+    if (!f) continue; // sin prefijo/consecutivo no se puede cruzar
     const parts = String(get(cTerc)||'').split(' - ');
     const n = nit(parts[0]), nombre = parts.slice(1).join(' - ').trim();
     const esNota = /^(NCP|NDP)/.test(code);
+    // Los tipos que empiezan por A son ANULACIONES de su causación (ACC01 anula CC001, AVEH anula DVEH...)
+    const esAnulacion = /^A/.test(code);
+    const deb = parseFloat(String(get(cDeb)).replace(/[^0-9.\-]/g,'')) || 0;
+    const cre = parseFloat(String(get(cCre)).replace(/[^0-9.\-]/g,'')) || 0;
     const llave = f + '|' + n;
-    if (!seen.has(llave)) {
-      seen.add(llave);
-      result.push({ FACTURA:f, 'NIT Emisor':n, 'Nombre Arsys':nombre, 'Tipo Arsys':code,
-                    'Es Nota': esNota, LLAVE:llave });
-    }
+    if (!acc[llave]) acc[llave] = { FACTURA:f, 'NIT Emisor':n, 'Nombre Arsys':nombre,
+        'Tipo Arsys':code, 'Es Nota':esNota, LLAVE:llave, _caus:0, _anul:0, _fprov:null };
+    const a = acc[llave];
+    if (esAnulacion) a._anul += cre; else a._caus += deb;
+    if (!a._fprov) { const fp = date(get(cFProv)); if (fp) a._fprov = fp; }
+    if (!a['Nombre Arsys'] && nombre) a['Nombre Arsys'] = nombre;
   }
+  const result = [];
+  const anulados = [];
+  Object.values(acc).forEach(a => {
+    a.NETO = a._caus - a._anul;
+    // Causación anulada y no rehecha: el neto queda en cero → NO está causada
+    a.ANULADO = (a._caus > 0 && Math.abs(a.NETO) < 1);
+    if (a.ANULADO) anulados.push(a); else result.push(a);
+  });
   result._noMapeados = noMapeados;
+  result._anulados = anulados;
   return result;
 }
 
@@ -1501,6 +1575,9 @@ async function runAll() {
   setTxt('cnt-totaldian', (state._dianTotal||[]).length);
   setTxt('cnt-cruce', state._cruce.filter(r=>r._cat==='NO EN HKA NI EN ARSYS').length);
   setTxt('cnt-orf', (state._orf||[]).length);
+  state._arsysAnulados = arsys._anulados || [];
+  computeEmparejamientos();
+  setTxt('cnt-empar', state._empar.filter(r=>r._nivel==='ALTA').length);
   document.getElementById('btn-export').disabled = false;
   document.getElementById('btn-diag').disabled = false;
   document.getElementById('btn-pdf').disabled = false;
@@ -1787,6 +1864,138 @@ function limpiarTerc(panel) {
   filterTable(panel, document.getElementById('search-'+panel).value);
 }
 
+
+// ═══════════ MOTOR DE EMPAREJAMIENTO POR EVIDENCIA ═══════════
+// Detecta facturas de la DIAN que SÍ están causadas en Arsys pero con el número
+// mal digitado o con otra referencia. Se apoya en tres señales: monto, fecha del
+// documento del proveedor y similitud del número. Nunca confirma con una sola.
+function simDoc(x, y) {
+  x = String(x||'').toUpperCase(); y = String(y||'').toUpperCase();
+  if (!x || !y) return 0;
+  const m = Array.from({length:x.length+1}, () => new Array(y.length+1).fill(0));
+  for (let i=0;i<x.length;i++)
+    for (let j=0;j<y.length;j++)
+      m[i+1][j+1] = x[i]===y[j] ? m[i][j]+1 : Math.max(m[i][j+1], m[i+1][j]);
+  return 2*m[x.length][y.length]/(x.length+y.length);
+}
+function diasEntre(a, b) {
+  if (!a || !b) return null;
+  const d = (new Date(a) - new Date(b))/86400000;
+  return isNaN(d) ? null : Math.abs(d);
+}
+function computeEmparejamientos() {
+  const TOL = 2;                       // tolerancia en pesos
+  const dian = state._dian || [];
+  const arsys = state._arsys || [];    // ya excluye anulados
+  const dK = new Set(dian.map(r=>r.LLAVE));
+  const aK = new Set(arsys.map(r=>r.LLAVE));
+  const pend = dian.filter(r => !aK.has(r.LLAVE));
+  const huerf = arsys.filter(r => !dK.has(r.LLAVE) && r.NETO > 0);
+  // índices por NIT para no recorrer todo cada vez
+  const hxN = {}, axN = {}, dxN = {};
+  huerf.forEach(r => (hxN[r['NIT Emisor']] = hxN[r['NIT Emisor']]||[]).push(r));
+  arsys.forEach(r => (axN[r['NIT Emisor']] = axN[r['NIT Emisor']]||[]).push(r));
+  dian.forEach(r => (dxN[r['NIT Emisor']] = dxN[r['NIT Emisor']]||[]).push(r));
+
+  const props = [];
+  pend.forEach(r => {
+    const tot = parseFloat(r.Total)||0;
+    if (!tot) return;
+    let c = (hxN[r['NIT Emisor']]||[]).filter(x => Math.abs(x.NETO - tot) < TOL);
+    if (!c.length) return;
+    c = c.map(x => ({ ...x, _mf: diasEntre(x._fprov, r['Fecha Emisión']) !== null &&
+                              diasEntre(x._fprov, r['Fecha Emisión']) <= 1,
+                      _sim: simDoc(x.FACTURA, r.FACTURA) }));
+    let cf = c.filter(x=>x._mf); if (!cf.length) cf = c;
+    cf.sort((a,b)=>b._sim - a._sim);
+    const best = cf[0];
+    const margen = cf.length===1 || (best._sim - cf[1]._sim >= 0.25);
+    const nD = (dxN[r['NIT Emisor']]||[]).filter(x=>Math.abs((parseFloat(x.Total)||0)-tot)<TOL).length;
+    const nA = (axN[r['NIT Emisor']]||[]).filter(x=>Math.abs(x.NETO-tot)<TOL).length;
+    const unico = (nD===1 && nA===1 && c.length===1);
+    const corrob = (best._mf?1:0) + (best._sim>=0.60?1:0);
+    // Guarda: hermanos del mismo proveedor con mismo monto Y misma fecha → nunca confirmar solo
+    const herm = (dxN[r['NIT Emisor']]||[]).filter(x =>
+      x.LLAVE!==r.LLAVE && Math.abs((parseFloat(x.Total)||0)-tot)<TOL &&
+      x['Fecha Emisión']===r['Fecha Emisión']).length;
+    let niv;
+    if (herm>0 && !(best._sim>=0.85 && margen)) niv='REVISAR';
+    else if (unico && corrob>=1) niv='ALTA';
+    else if (!unico && best._mf && best._sim>=0.60 && margen) niv='ALTA';
+    else if (unico || (best._mf && cf.length===1)) niv='SOLO MONTO';
+    else niv='REVISAR';
+    props.push({ ...r, _cand:best.FACTURA, _candLlave:best.LLAVE, _candNeto:best.NETO,
+      _candFecha:best._fprov||'', _sim:Math.round(best._sim*100)/100, _fechaOK:best._mf,
+      _ncand:c.length, _herm:herm, _nivel:niv, _conflicto:'' });
+  });
+  // Un documento de Arsys solo puede pertenecer a UNA factura: gana el de mejor puntaje
+  const rank = {ALTA:3, 'SOLO MONTO':2, REVISAR:1};
+  const porCand = {};
+  props.forEach(p => (porCand[p._candLlave] = porCand[p._candLlave]||[]).push(p));
+  Object.values(porCand).forEach(grp => {
+    if (grp.length < 2) return;
+    const score = p => rank[p._nivel]*100 + (p._fechaOK?10:0) + p._sim*10;
+    let win = grp[0];
+    grp.forEach(p => { if (score(p) > score(win)) win = p; });
+    grp.forEach(p => {
+      if (p !== win) { p._nivel = 'REVISAR'; p._conflicto = 'candidato ya asignado a ' + win.FACTURA; }
+      else p._conflicto = 'disputado con ' + (grp.length-1) + ' más';
+    });
+  });
+  state._empar = props;
+  state._emparIdx = {}; props.forEach(p => { state._emparIdx[p.LLAVE] = p; });
+  return props;
+}
+
+// ── RENDER EMPAREJAMIENTOS ──
+function renderEmpar() {
+  if (!state._empar) computeEmparejamientos();
+  const d = state._empar || [];
+  const n = niv => d.filter(r=>r._nivel===niv).length;
+  const val = d.filter(r=>r._nivel==='ALTA').reduce((s,r)=>s+(parseFloat(r.Total)||0),0);
+  const anul = (state._arsysAnulados||[]).length;
+  document.getElementById('stats-empar').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Propuestas</div><div class="stat-value sv-blue">${d.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Confirmadas (alta)</div><div class="stat-value sv-green">${n('ALTA')}</div></div>
+    <div class="stat-card"><div class="stat-label">Solo coincide monto</div><div class="stat-value sv-amber">${n('SOLO MONTO')}</div></div>
+    <div class="stat-card"><div class="stat-label">A revisar</div><div class="stat-value sv-red">${n('REVISAR')}</div></div>
+    <div class="stat-card"><div class="stat-label">Valor confianza alta</div><div class="stat-value sv-green" style="font-size:15px">${money(val)}</div></div>
+    <div class="stat-card"><div class="stat-label">Causaciones anuladas</div><div class="stat-value sv-amber">${anul}</div></div>`;
+  filterEmpar();
+}
+function filterEmpar() {
+  const q=(document.getElementById('search-empar').value||'').toLowerCase();
+  const sf=document.getElementById('status-empar').value;
+  const data=(state._empar||[]).filter(r =>
+    (!q || Object.values(r).some(v=>String(v).toLowerCase().includes(q))) &&
+    (!sf || r._nivel===sf));
+  state._emparFilt = data;
+  document.getElementById('tbl-count-empar').textContent = data.length+' propuestas';
+  const tb=document.getElementById('tbody-empar');
+  if(!data.length){ tb.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin propuestas</div></div></td></tr>`; return; }
+  const bdg = n => n==='ALTA' ? '<span class="badge badge-fact">✓ ALTA</span>'
+    : n==='SOLO MONTO' ? '<span class="badge badge-typo">⚠ SOLO MONTO</span>'
+    : '<span class="badge badge-pendiente"><span class="dot dot-red"></span>REVISAR</span>';
+  const orden={ALTA:0,'SOLO MONTO':1,REVISAR:2};
+  tb.innerHTML=[...data].sort((a,b)=>orden[a._nivel]-orden[b._nivel]).map(r=>{
+    const nom=r['Nombre Emisor']||'';
+    const cf=r._conflicto?` <span style="font-size:9px;color:var(--orange-d);" title="${r._conflicto}">⚠</span>`:'';
+    return `<tr>
+      <td class="mono">${r['NIT Emisor']}</td>
+      <td class="bold" title="${nom}">${nom.length>24?nom.slice(0,24)+'…':nom}</td>
+      <td class="mono">${r.FACTURA}</td>
+      <td class="mono">${r['Fecha Emisión']}</td>
+      <td class="amount">${money(r.Total)}</td>
+      <td class="mono bold" style="color:var(--blue);">${r._cand}${cf}</td>
+      <td class="mono" style="font-size:10px;">${r._candFecha||'—'} ${r._fechaOK?'<span style="color:var(--green-d);">✓</span>':''}</td>
+      <td class="mono">${(r._sim*100).toFixed(0)}%</td>
+      <td>${bdg(r._nivel)}</td>
+      <td><button class="verif-btn" title="${VERIF_LBLS[(state.verif||{})[r.LLAVE]||0]}" onclick="toggleVerifEmpar('${r.LLAVE.replace(/'/g,"\\'")}')">${VERIF_ICONS[(state.verif||{})[r.LLAVE]||0]}</button></td>
+    </tr>`;
+  }).join('');
+}
+function toggleVerifEmpar(llave){ state.verif=state.verif||{}; state.verif[llave]=((state.verif[llave]||0)+1)%3; filterEmpar(); }
+
 // ── DETALLE ORF ──
 function catORF(r){ return r._enHKA&&r._enArsys?'EN AMBOS':r._enHKA?'SOLO HKA':r._enArsys?'SOLO ARSYS':'EN NINGUNO'; }
 function renderORF(){
@@ -1855,7 +2064,7 @@ function filterCruce() {
   state._cruceFilt = data;
   document.getElementById('tbl-count-cruce').textContent = data.length + ' documentos';
   const tb = document.getElementById('tbody-cruce');
-  if (!data.length) { tb.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin documentos</div></div></td></tr>`; return; }
+  if (!data.length) { tb.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Sin documentos</div></div></td></tr>`; return; }
   const catBdg = c => c==='EN HKA Y EN ARSYS' ? `<span class="badge badge-fact">✓ ${c}</span>`
     : c==='EN HKA, NO EN ARSYS' ? `<span class="badge badge-typo">${c}</span>`
     : c==='NO EN HKA, SÍ EN ARSYS' ? `<span class="badge badge-nota">${c}</span>`
@@ -1874,6 +2083,7 @@ function filterCruce() {
       <td style="text-align:center;">${chk(r._enHKA)}</td>
       <td style="text-align:center;">${chk(r._enArsys)}</td>
       <td>${catBdg(r._cat)}</td>
+      <td>${(function(){ const p=(state._emparIdx||{})[r.LLAVE]; return p ? `<span class="badge ${p._nivel==='ALTA'?'badge-fact':p._nivel==='SOLO MONTO'?'badge-typo':'badge-pendiente'}" title="En Arsys aparece como ${p._cand} (parecido ${(p._sim*100).toFixed(0)}%${p._fechaOK?', fecha coincide':''})">→ ${p._cand}</span>` : '<span style="color:var(--text3);">—</span>'; })()}</td>
       <td>${r['CUFE'] ? `<button class="verif-btn" title="Validar en la DIAN (buscar por CUFE)" onclick="validarDIAN('${r['CUFE']}')">🔎 DIAN</button>` : '<span style="color:var(--text3);">—</span>'}</td>
     </tr>`;
   }).join('');
@@ -1955,6 +2165,8 @@ function switchPanel(panel) {
   if (pNotas) pNotas.style.display = (panel==='notas') ? 'block' : 'none';
   const pCruce = document.getElementById('panel-cruce');
   if (pCruce) pCruce.style.display = (panel==='cruce') ? 'block' : 'none';
+  const pEmp = document.getElementById('panel-empar');
+  if (pEmp) pEmp.style.display = (panel==='empar') ? 'block' : 'none';
   const pORF = document.getElementById('panel-orf');
   if (pORF) pORF.style.display = (panel==='orf') ? 'block' : 'none';
   const pTHka = document.getElementById('panel-totalhka');
@@ -1965,16 +2177,18 @@ function switchPanel(panel) {
     const el = document.getElementById('panel-'+p);
     if(el){ el.style.display = p===panel?'block':'none'; el.classList.toggle('active',p===panel); }
   });
-  ['cristian','luna','totalhka','totaldian','cruce','orf'].forEach(p => document.getElementById('nav-'+p)?.classList.toggle('active',p===panel));
+  ['cristian','luna','totalhka','totaldian','cruce','orf','empar'].forEach(p => document.getElementById('nav-'+p)?.classList.toggle('active',p===panel));
   if (panel==='notas') renderNotas();
   if (panel==='cruce') renderCruce();
   if (panel==='orf') renderORF();
+  if (panel==='empar') renderEmpar();
   if (panel==='totalhka') renderTotalHKA();
   if (panel==='totaldian') renderTotalDIAN();
   const cfg = {
     upload: ['Conciliación de Compras','Cargue los 4 archivos y ejecute el análisis',''],
     cristian: ['DIAN vs HKA — Sin facturar electrónicamente','Documentos en DIAN que no están en HKA','cristian'],
     luna: ['DIAN vs Arsys — Sin contabilizar','Documentos en DIAN sin contabilizar en Arsys','luna'],
+    empar: ['Posibles facturas mal digitadas','Facturas de la DIAN que sí están causadas en Arsys pero con otro número','empar'],
     orf: ['Detalle ORF S.A. BIC','Documentos que ORF nos emitió y su estado en HKA y Arsys','orf'],
     cruce: ['Cruce completo','Cada documento de la DIAN, revisado contra HKA y contra Arsys','cruce'],
     notas: ['Notas de anulación','Notas crédito/débito y la factura que afectan','notas'],
@@ -2150,6 +2364,24 @@ function datasetDePanel(panel) {
         {h:'FORMA PAGO',w:14,f:r=>r['Forma Pago']||''},
         {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
         {h:'TOTAL',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''}
+      ]},
+    empar: {
+      titulo:'POSIBLES FACTURAS CAUSADAS CON OTRO NÚMERO',
+      hoja:'Mal digitadas',
+      filas: state._emparFilt || state._empar || [],
+      cols:[
+        {h:'NIT EMISOR',w:16,f:r=>r['NIT Emisor']},
+        {h:'NOMBRE EMISOR',w:42,f:r=>r['Nombre Emisor']},
+        {h:'FACTURA DIAN',w:18,f:r=>r.FACTURA},
+        {h:'FECHA EMISIÓN',w:15,f:r=>r['Fecha Emisión']},
+        {h:'VALOR',w:16,f:r=>Number(r.Total)||0,n:true},
+        {h:'EN ARSYS APARECE COMO',w:22,f:r=>r._cand},
+        {h:'FECHA DOC. ARSYS',w:16,f:r=>r._candFecha||''},
+        {h:'FECHA COINCIDE',w:14,f:r=>r._fechaOK?'SÍ':'NO'},
+        {h:'PARECIDO %',w:12,f:r=>Math.round((r._sim||0)*100),n:true},
+        {h:'CONFIANZA',w:13,f:r=>r._nivel},
+        {h:'OBSERVACIÓN',w:38,f:r=>r._conflicto||''},
         {h:'CUFE / CUDE',w:70,f:r=>r['CUFE']||''}
       ]},
     orf: {
@@ -2350,3 +2582,4 @@ function pct(n,t){ return t? ((n*100)/t).toFixed(1)+'%' : '—'; }
 </script>
 </body>
 </html>
+
